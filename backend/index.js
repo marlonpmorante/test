@@ -1,4 +1,4 @@
-// server.js
+// index.js
 require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
 const mysql = require('mysql2/promise'); // Using promise-based version
@@ -6,24 +6,66 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken'); // 🔑 For JSON Web Tokens
+const bcrypt = require('bcryptjs'); // 🔑 For password hashing
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// --------------------------------------------------
+// ✅ SECURITY CONFIGURATION
+// --------------------------------------------------
+
+// ✅ Allowed origins for CORS (MUST be updated for production)
+const allowedOrigins = [
+    https://rbgonzales-pharmacy-production-a7b7.up.railway.app/
+    'http://localhost:3000', // Common React/Frontend development port
+    `http://localhost:${PORT}` // Self-origin
+];
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_default_secret_key_for_pharm_inventory';
+if (JWT_SECRET === 'your_default_secret_key_for_pharm_inventory') {
+    console.warn("⚠️ WARNING: Using default JWT_SECRET. Please set process.env.JWT_SECRET in your .env file!");
+}
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, postman, or curl requests)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            // Check if origin includes a specific deployment base (e.g., railway, heroku)
+            if (origin && (origin.includes('.railway.app') || origin.includes('your-domain.com'))) {
+                 callback(null, true);
+            } else {
+                console.log(`CORS Error: Origin ${origin} not allowed`);
+                callback(new Error('CORS not allowed by policy'));
+            }
+        }
+    },
+    credentials: true
+}));
+
 // Middleware
-app.use(cors()); // Enable CORS for all origins (for development)
 app.use(express.json()); // For parsing application/json
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
-// Serve static images from the 'uploads' directory
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir); // Create 'uploads' directory if it doesn't exist
-}
-app.use('/uploads', express.static(uploadsDir));
+// --------------------------------------------------
+// ✅ DATABASE CONNECTION: USING MYSQL_URL
+// --------------------------------------------------
+const dbUrl = process.env.MYSQL_URL;
 
-// MySQL Connection Pool (more efficient than single connection)
-const pool = mysql.createPool({
+if (!dbUrl) {
+    console.error("❌ FATAL ERROR: MYSQL_URL environment variable is not set. Using fallback connection details.");
+    // Fallback to manual environment variables if MYSQL_URL is not set (less secure, but retains previous functionality)
+    if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+         console.error("❌ FATAL ERROR: Neither MYSQL_URL nor all individual DB credentials are set. Exiting.");
+         process.exit(1);
+    }
+}
+
+// MySQL Connection Pool (using URL or individual params)
+const pool = dbUrl ? mysql.createPool(dbUrl) : mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -36,13 +78,65 @@ const pool = mysql.createPool({
 // Test database connection
 pool.getConnection()
     .then(connection => {
-        console.log('Connected to MySQL database!');
+        console.log('✅ Connected to MySQL database!');
         connection.release(); // Release the connection back to the pool
     })
     .catch(err => {
-        console.error('Error connecting to MySQL:', err.message);
+        console.error('❌ Error connecting to MySQL:', err.message);
         process.exit(1); // Exit the process if unable to connect to the database
     });
+
+
+// --------------------------------------------------
+// --- AUTHENTICATION & AUTHORIZATION MIDDLEWARE ---
+// --------------------------------------------------
+
+/**
+ * Middleware to verify JWT and attach admin data to req.admin
+ */
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) {
+        return res.status(401).json({ message: 'Authorization token missing' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, admin) => {
+        if (err) {
+            // Log for server-side debugging
+            console.error('JWT Verification Error:', err.message); 
+            // Send 403 status to indicate token is invalid or expired
+            return res.status(403).json({ message: 'Invalid or expired token. Please log in again.' });
+        }
+        req.admin = admin; // { id, username, role }
+        next();
+    });
+}
+
+/**
+ * Middleware to check if the authenticated admin has the required role (e.g., 'admin').
+ */
+function authorizeRole(requiredRole) {
+    return (req, res, next) => {
+        if (!req.admin || req.admin.role !== requiredRole) {
+            return res.status(403).json({ message: `Forbidden: Only '${requiredRole}' role can perform this action.` });
+        }
+        next();
+    };
+}
+
+
+// --------------------------------------------------
+// --- FILE UPLOAD & STATIC SERVE ---
+// --------------------------------------------------
+
+// Serve static images from the 'uploads' directory
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir); // Create 'uploads' directory if it doesn't exist
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Multer storage configuration for image uploads
 const storage = multer.diskStorage({
@@ -57,9 +151,124 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-// --- API Endpoints for Products ---
+// --------------------------------------------------
+// --- AUTHENTICATION ENDPOINTS (Admins) ---
+// --------------------------------------------------
+
+// POST for admin login
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Username and password are required.' });
+        }
+
+        // NOTE: The table is assumed to be named 'admins' to reflect the role
+        const [rows] = await pool.query('SELECT id, username, password_hash, role FROM admins WHERE username = ?', [username]);
+        const admin = rows[0];
+
+        if (!admin) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+
+        // Compare the provided password with the hashed password
+        const isPasswordValid = await bcrypt.compare(password, admin.password_hash);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { id: admin.id, username: admin.username, role: admin.role },
+            JWT_SECRET,
+            { expiresIn: '12h' } // Token expires in 12 hours
+        );
+
+        res.json({ 
+            message: 'Login successful!', 
+            token,
+            admin: { id: admin.id, username: admin.username, role: admin.role } 
+        });
+
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ message: 'An unexpected error occurred during login.', error: err.message });
+    }
+});
+
+
+// --------------------------------------------------
+// --- API Endpoints for Admin Management (Previously Users) ---
+// --------------------------------------------------
+
+// GET all admins (Protected: Requires any authenticated admin)
+app.get('/api/admins', authenticateToken, async (req, res) => {
+    try {
+        // Exclude password_hash for security
+        const [rows] = await pool.query('SELECT id, username, role FROM admins');
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching admins:', err);
+        res.status(500).json({ message: 'Error fetching admins', error: err.message });
+    }
+});
+
+// POST a new admin (Protected: Requires 'admin' role)
+app.post('/api/admins', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        const { username, password, role } = req.body;
+        // Ensure role is a valid type (admin or cashier)
+        if (!username || !password || (role !== 'admin' && role !== 'cashier')) {
+            return res.status(400).json({ message: 'Username, password, and a valid role (admin or cashier) are required.' });
+        }
+        
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const [result] = await pool.query(
+            'INSERT INTO admins (username, password_hash, role) VALUES (?, ?, ?)',
+            [username, hashedPassword, role]
+        );
+        res.status(201).json({ message: 'Admin added successfully!', admin: { id: result.insertId, username, role } });
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ message: 'Username already exists.' });
+        }
+        console.error('Error adding admin:', err);
+        res.status(500).json({ message: 'Error adding admin', error: err.message });
+    }
+});
+
+// DELETE an admin (Protected: Requires 'admin' role)
+app.delete('/api/admins/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Prevent admin from deleting themselves (optional security check)
+        if (parseInt(id) === req.admin.id) {
+             return res.status(403).json({ message: 'Cannot delete your own account while logged in.' });
+        }
+
+        const [result] = await pool.query('DELETE FROM admins WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Admin not found.' });
+        }
+        res.json({ message: 'Admin deleted successfully!' });
+    } catch (err) {
+        console.error('Error deleting admin:', err);
+        res.status(500).json({ message: 'Error deleting admin', error: err.message });
+    }
+});
+
+
+// --------------------------------------------------
+// --- API Endpoints for Products (Protected) ---
+// --------------------------------------------------
+
 // GET all products
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', authenticateToken, async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM products');
         // Prepend base URL to image paths for frontend consumption
@@ -74,8 +283,8 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// POST a new product with image upload
-app.post('/api/products', upload.single('image'), async (req, res) => {
+// POST a new product with image upload (Protected: Requires 'admin' role)
+app.post('/api/products', authenticateToken, authorizeRole('admin'), upload.single('image'), async (req, res) => {
     try {
         const {
             medicineId, supplierName, medicineName, genericName,
@@ -118,8 +327,8 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
     }
 });
 
-// PUT (Update) an existing product with optional image upload
-app.put('/api/products/:id', upload.single('image'), async (req, res) => {
+// PUT (Update) an existing product with optional image upload (Protected: Requires 'admin' role)
+app.put('/api/products/:id', authenticateToken, authorizeRole('admin'), upload.single('image'), async (req, res) => {
     try {
         const { id } = req.params;
         const {
@@ -187,8 +396,8 @@ app.put('/api/products/:id', upload.single('image'), async (req, res) => {
     }
 });
 
-// DELETE a product
-app.delete('/api/products/:id', async (req, res) => {
+// DELETE a product (Protected: Requires 'admin' role)
+app.delete('/api/products/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -217,10 +426,12 @@ app.delete('/api/products/:id', async (req, res) => {
 });
 
 
+// --------------------------------------------------
+// --- API Endpoints for Categories (Protected) ---
+// --------------------------------------------------
 
-// --- API Endpoints for Categories ---
 // GET all categories
-app.get('/api/categories', async (req, res) => {
+app.get('/api/categories', authenticateToken, async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM categories');
         res.json(rows);
@@ -230,8 +441,8 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
-// POST a new category
-app.post('/api/categories', async (req, res) => {
+// POST a new category (Protected: Requires 'admin' role)
+app.post('/api/categories', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const { name } = req.body;
         if (!name) {
@@ -248,8 +459,8 @@ app.post('/api/categories', async (req, res) => {
     }
 });
 
-// PUT (Update) a category
-app.put('/api/categories/:id', async (req, res) => {
+// PUT (Update) a category (Protected: Requires 'admin' role)
+app.put('/api/categories/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
         const { name } = req.body;
@@ -271,8 +482,8 @@ app.put('/api/categories/:id', async (req, res) => {
     }
 });
 
-// DELETE a category
-app.delete('/api/categories/:id', async (req, res) => {
+// DELETE a category (Protected: Requires 'admin' role)
+app.delete('/api/categories/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -294,9 +505,12 @@ app.delete('/api/categories/:id', async (req, res) => {
 });
 
 
-// --- API Endpoints for Receipts/Orders ---
-// POST a new receipt
-app.post('/api/receipts', async (req, res) => {
+// --------------------------------------------------
+// --- API Endpoints for Receipts/Orders (Protected) ---
+// --------------------------------------------------
+
+// POST a new receipt (Protected: Requires any authenticated admin)
+app.post('/api/receipts', authenticateToken, async (req, res) => {
     const connection = await pool.getConnection(); // Get a connection from the pool
     try {
         await connection.beginTransaction(); // Start a transaction
@@ -354,8 +568,8 @@ app.post('/api/receipts', async (req, res) => {
     }
 });
 
-// GET all receipts with their items
-app.get('/api/receipts', async (req, res) => {
+// GET all receipts with their items (Protected: Requires any authenticated admin)
+app.get('/api/receipts', authenticateToken, async (req, res) => {
     try {
         // Fetch all receipts
         const [receipts] = await pool.query('SELECT * FROM receipts ORDER BY transaction_date DESC');
@@ -376,8 +590,8 @@ app.get('/api/receipts', async (req, res) => {
     }
 });
 
-// GET a single receipt by ID with its items
-app.get('/api/receipts/:id', async (req, res) => {
+// GET a single receipt by ID with its items (Protected: Requires any authenticated admin)
+app.get('/api/receipts/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -398,8 +612,8 @@ app.get('/api/receipts/:id', async (req, res) => {
     }
 });
 
-// DELETE a receipt and its associated items
-app.delete('/api/receipts/:id', async (req, res) => {
+// DELETE a receipt and its associated items (Protected: Requires 'admin' role)
+app.delete('/api/receipts/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     const connection = await pool.getConnection(); // Get a connection from the pool
     try {
         await connection.beginTransaction(); // Start a transaction
@@ -430,11 +644,10 @@ app.delete('/api/receipts/:id', async (req, res) => {
     }
 });
 
-// NEW: API Endpoint for Sales Report (Aggregate Sales Data)
-app.get('/api/sales-report', async (req, res) => {
+// API Endpoint for Sales Report (Protected: Requires any authenticated admin)
+app.get('/api/sales-report', authenticateToken, async (req, res) => {
     try {
         // This query aggregates sales data from receipts and their items
-        // You can customize this query based on the specific sales report you need
         const [salesData] = await pool.query(`
             SELECT
                 r.transaction_date,
@@ -463,90 +676,11 @@ app.get('/api/sales-report', async (req, res) => {
 });
 
 
-// --- API Endpoints for Users (Authentication and Management) ---
-// GET all users (Excludes password for security)
-app.get('/api/users', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT id, username, role FROM users');
-        res.json(rows);
-    } catch (err) {
-        console.error('Error fetching users:', err);
-        res.status(500).json({ message: 'Error fetching users', error: err.message });
-    }
-});
-
-// POST a new user (for registration or adding members/admins)
-app.post('/api/users', async (req, res) => {
-    try {
-        const { username, password, role } = req.body;
-        if (!username || !password || !role) {
-            return res.status(400).json({ message: 'Username, password, and role are required.' });
-        }
-        // IMPORTANT: In a real application, you MUST hash the password here (e.g., using bcrypt).
-        // For simplicity, it's stored in plain text as per the provided AddMember.js component's expectation.
-        const [result] = await pool.query(
-            'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-            [username, password, role]
-        );
-        res.status(201).json({ message: 'User added successfully!', user: { id: result.insertId, username, role } });
-    } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({ message: 'Username already exists.' });
-        }
-        console.error('Error adding user:', err);
-        res.status(500).json({ message: 'Error adding user', error: err.message });
-    }
-});
-
-// DELETE a user
-app.delete('/api/users/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-        res.json({ message: 'User deleted successfully!' });
-    } catch (err) {
-        console.error('Error deleting user:', err);
-        res.status(500).json({ message: 'Error deleting user', error: err.message });
-    }
-});
-
-// POST for user login
-app.post('/api/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Username and password are required.' });
-        }
-
-        const [users] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-        const user = users[0];
-
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid username or password.' });
-        }
-
-        // IMPORTANT: In a real application, you would compare the provided password with the hashed password.
-        // Example: const isPasswordValid = await bcrypt.compare(password, user.password);
-        const isPasswordValid = (password === user.password); // For demonstration, comparing plain text
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Invalid username or password.' });
-        }
-
-        // In a real application, you would generate a JWT token here for session management
-        res.json({ message: 'Login successful!', user: { id: user.id, username: user.username, role: user.role } });
-
-    } catch (err) {
-        console.error('Login error:', err);
-        res.status(500).json({ message: 'An unexpected error occurred during login.', error: err.message });
-    }
-});
+// --------------------------------------------------
+// --- INITIALIZATION ---
+// --------------------------------------------------
 
 // Start the server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
