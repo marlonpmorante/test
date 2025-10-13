@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 5000;
 
 // ✅ Allowed origins for CORS (MUST be updated for production)
 const allowedOrigins = [
-    https://rbgonzales-pharmacy-production-a7b7.up.railway.app/
+    'https://rbgonzales-pharmacy-production-a7b7.up.railway.app/
     'http://localhost:3000', // Common React/Frontend development port
     `http://localhost:${PORT}` // Self-origin
 ];
