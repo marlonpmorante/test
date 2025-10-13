@@ -1,5 +1,4 @@
-// server.js
-require('dotenv').config(); // Load environment variables from .env file
+// index.js
 const express = require('express');
 const mysql = require('mysql2/promise'); // Using promise-based version
 const cors = require('cors');
@@ -8,7 +7,8 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+// NOTE: Hardcoded PORT, you can change this if needed
+const PORT = 5000; 
 
 // Middleware
 app.use(cors()); // Enable CORS for all origins (for development)
@@ -22,12 +22,14 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-// MySQL Connection Pool (more efficient than single connection)
+// --- HARDCODED MySQL Connection Pool ---
+// !! WARNING: Hardcoding credentials is a security risk. Use .env for production.
+// You MUST replace these placeholder values with your actual MySQL credentials.
 const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    host: 'localhost',              // Replace with your DB host
+    user: 'root',                   // Replace with your DB username (The user shown in the error '') was empty. 'root' is a common default.
+    password: '200238css',   // Replace with your actual DB password
+    database: 'drugstore', // Replace with your actual database name
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -41,6 +43,7 @@ pool.getConnection()
     })
     .catch(err => {
         console.error('Error connecting to MySQL:', err.message);
+        // You should see a successful connection log or a different error (e.g., wrong password)
         process.exit(1); // Exit the process if unable to connect to the database
     });
 
