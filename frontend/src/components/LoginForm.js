@@ -124,7 +124,7 @@ const LoginForm = ({ onLogin }) => { //
           }}>
             <img src={LogoImage} alt="App logo" style={{ maxWidth: '190px', maxHeight: '190px', marginBottom: '-50px' }} />
           </div>
-          <h2 style={{ color: '#00bcd4', marginBottom: '30px' }}></h2> {/* cite: 2 */}
+          <h2 style={{ color: '#00bcd4', marginBottom: '30px' }}>Welcome</h2> {/* cite: 2 */}
           <form onSubmit={handleLogin} style={{ width: '80%', maxWidth: '300px' }}> {/* cite: 2 */}
             <div style={{ marginBottom: '20px', position: 'relative' }}> {/* cite: 2 */}
               <label htmlFor="username" style={{ display: 'block', marginBottom: '5px', color: '#757575' }}> {/* cite: 2 */}
