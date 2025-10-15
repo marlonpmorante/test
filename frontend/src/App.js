@@ -5,7 +5,6 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import LoginForm from './components/LoginForm';
 import MainApp from './pages/main';
 // InventoryForm will be rendered as the default home route within MainApp
-import InventoryForm from './components/InventoryForm';
 
 // Reusable PrivateRoute component to protect routes
 const PrivateRoute = ({ isAuthenticated, children }) => {
