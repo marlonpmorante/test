@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaPrint, FaEye, FaTrash } from 'react-icons/fa';
+import { FaPrint, FaEye, FaTrash } from 'react-icons/fa';
 
 export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGoBack }) {
   const [receipts, setReceipts] = useState([]);
@@ -155,6 +155,9 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
   return (
     <div className="receipt-history-container">
       <h2>Receipt History</h2>
+      {error && (
+        <div className="error-container">{error}</div>
+      )}
       {selectedReceipt ? (
         loadingDetails ? (
           <div className="loading-message">
