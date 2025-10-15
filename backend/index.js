@@ -39,7 +39,7 @@ function getBaseUrl(req) {
 // DB_PASSWORD=yourpassword
 // DB_NAME=drugstore
 // DB_PORT=3306
-const pool = mysql.createPool({
+const dbConfig = {
     host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
     user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
     password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
@@ -48,7 +48,11 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
-});
+};
+
+console.log('MySQL config:', { host: dbConfig.host, user: dbConfig.user, database: dbConfig.database, port: dbConfig.port });
+const pool = mysql.createPool(dbConfig);
+
 
 // Test database connection
 pool.getConnection()
@@ -57,9 +61,10 @@ pool.getConnection()
         connection.release(); // Release the connection back to the pool
     })
     .catch(err => {
-        console.error('Error connecting to MySQL:', err.message);
-        // You should see a successful connection log or a different error (e.g., wrong password)
-        process.exit(1); // Exit the process if unable to connect to the database
+        console.error('Error connecting to MySQL:', err?.message || err);
+        console.error('Ensure database is reachable and credentials are correct:', { host: dbConfig.host, database: dbConfig.database, port: dbConfig.port, user: dbConfig.user });
+        // Exit the process if unable to connect to the database
+        process.exit(1);
     });
 
 // Multer storage configuration for image uploads
