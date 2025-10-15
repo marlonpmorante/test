@@ -30,6 +30,7 @@ function getBaseUrl(req) {
     const host = req.get('host');
     return `${proto}://${host}`;
 }
+app.use(cors({ origin: process.env.CORS }));
 
 // Database connection pool using environment variables
 // Define DB_* variables in your environment or a .env file
