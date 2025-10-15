@@ -15,7 +15,7 @@ import logo from '../assets/logo.png';
 
 // ... rest of the file ...
 
-import { FaHome, FaShoppingCart, FaBoxes, FaUserPlus, FaSignOutAlt, FaChartBar, FaRegUserCircle, FaReceipt, FaCube, FaPlusSquare, FaTags, FaDollarSign, FaHospitalSymbol } from 'react-icons/fa';
+import { FaHome, FaBoxes, FaUserPlus, FaSignOutAlt, FaChartBar, FaRegUserCircle, FaReceipt, FaCube, FaPlusSquare, FaTags, FaDollarSign } from 'react-icons/fa';
 
 // New component for Product Summary on Dashboard
 const ProductSummaryDashboard = ({ showMessageBox }) => {
