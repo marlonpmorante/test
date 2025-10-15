@@ -15,13 +15,21 @@ const PORT = process.env.PORT || 5000;
 app.use(cors()); // Enable CORS for all origins (for development)
 app.use(express.json()); // For parsing application/json
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
-
+// Trust reverse proxies (needed for accurate req.protocol on Railway)
+app.set('trust proxy', 1);
 // Serve static images from the 'uploads' directory
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir); // Create 'uploads' directory if it doesn't exist
 }
 app.use('/uploads', express.static(uploadsDir));
+
+// Helper to build absolute URLs behind proxies (e.g., Railway)
+function getBaseUrl(req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    return `${proto}://${host}`;
+}
 
 // Database connection pool using environment variables
 // Define DB_* variables in your environment or a .env file
@@ -32,11 +40,11 @@ app.use('/uploads', express.static(uploadsDir));
 // DB_NAME=drugstore
 // DB_PORT=3306
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'drugstore',
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
+    host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+    user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+    password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+    database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'drugstore',
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : (process.env.MYSQLPORT ? parseInt(process.env.MYSQLPORT, 10) : 3306),
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -75,7 +83,7 @@ app.get('/api/products', async (req, res) => {
         // Prepend base URL to image paths for frontend consumption
         const productsWithImageUrls = rows.map(product => ({
             ...product,
-            imageUrl: product.imageUrl ? `http://localhost:${PORT}/uploads/${path.basename(product.imageUrl)}` : null
+            imageUrl: product.imageUrl ? `${getBaseUrl(req)}/uploads/${path.basename(product.imageUrl)}` : null
         }));
         res.json(productsWithImageUrls);
     } catch (err) {
@@ -114,7 +122,7 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
             medicineId, supplierName, medicineName, genericName,
             brandName, category, description, form, strength,
             unit, reorderLevel, price, quantity, deliveryDate,
-            imageUrl: imageUrl ? `http://localhost:${PORT}/uploads/${path.basename(imageUrl)}` : null,
+            imageUrl: imageUrl ? `${getBaseUrl(req)}/uploads/${path.basename(imageUrl)}` : null,
             barcode
         };
 
@@ -183,7 +191,7 @@ app.put('/api/products/:id', upload.single('image'), async (req, res) => {
             medicineId, supplierName, medicineName, genericName,
             brandName, category, description, form, strength,
             unit, reorderLevel, price, quantity, deliveryDate,
-            imageUrl: imageUrl ? `http://localhost:${PORT}/uploads/${path.basename(imageUrl)}` : null,
+            imageUrl: imageUrl ? `${getBaseUrl(req)}/uploads/${path.basename(imageUrl)}` : null,
             barcode
         };
 

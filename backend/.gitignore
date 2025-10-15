@@ -1,0 +1,11 @@
+# Dependency directories
+node_modules/
+
+# Logs and build files
+*.log
+npm-debug.log*
+dist/
+build/
+
+# Environment variables (SECURITY RISK if pushed!)
+.env
