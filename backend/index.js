@@ -51,7 +51,23 @@ const dbConfig = {
 };
 
 console.log('MySQL config:', { host: dbConfig.host, user: dbConfig.user, database: dbConfig.database, port: dbConfig.port });
-const pool = mysql.createPool(dbConfig);
+if (dbConfig.uri) {
+    try {
+        const parsed = new URL(dbConfig.uri);
+        console.log('Using connection URL (MYSQL_URL/DATABASE_URL):', {
+            host: parsed.hostname,
+            database: parsed.pathname ? parsed.pathname.slice(1) : undefined,
+            port: parsed.port || 3306
+        });
+    } catch (e) {
+        console.log('Using connection URL from env, unable to parse for safe logging');
+    }
+}
+
+// Support connection string in DATABASE_URL / MYSQL_URL
+const pool = dbConfig.uri
+    ? mysql.createPool(dbConfig.uri)
+    : mysql.createPool(dbConfig);
 
 
 // Test database connection
