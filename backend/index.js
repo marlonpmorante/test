@@ -42,9 +42,11 @@ function getBaseUrl(req) {
 const dbConfig = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT,
+     password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+    database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'drugstore',
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : (process.env.MYSQLPORT ? parseInt(process.env.MYSQLPORT, 10) : 3306),
+    // Railway/PlanetScale style single-URL env var support
+    uri: process.env.DATABASE_URL || process.env.MYSQL_URL || undefined,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
