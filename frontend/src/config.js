@@ -19,7 +19,7 @@ const runtimeHost = (typeof window !== 'undefined' && window.location && window.
 
 // Map known frontend hosts to their backend API hosts
 const hostToBackendDomain = {
-  'rbgonzalez.up.railway.app': 'https://rbgonzalez-backend-production.up.railway.app',
+  'rbgonzales.up.railway.app': 'https://rbgonzalez-backend-production.up.railway.app',
 };
 const mappedBackend = runtimeHost && hostToBackendDomain[runtimeHost]
   ? `${hostToBackendDomain[runtimeHost].replace(/\/$/, '')}/api`
