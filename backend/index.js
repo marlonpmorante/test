@@ -5,10 +5,11 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
 
 const app = express();
-// NOTE: Hardcoded PORT, you can change this if needed
-const PORT = 5000; 
+// Respect environment PORT in production
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors()); // Enable CORS for all origins (for development)
@@ -22,14 +23,20 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-// --- HARDCODED MySQL Connection Pool ---
-// !! WARNING: Hardcoding credentials is a security risk. Use .env for production.
-// You MUST replace these placeholder values with your actual MySQL credentials.
+// Database connection pool using environment variables
+// Define DB_* variables in your environment or a .env file
+// Example:
+// DB_HOST=localhost
+// DB_USER=root
+// DB_PASSWORD=yourpassword
+// DB_NAME=drugstore
+// DB_PORT=3306
 const pool = mysql.createPool({
-    host: 'localhost',              // Replace with your DB host
-    user: 'root',                   // Replace with your DB username (The user shown in the error '') was empty. 'root' is a common default.
-    password: '200238css',   // Replace with your actual DB password
-    database: 'drugstore', // Replace with your actual database name
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'drugstore',
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
