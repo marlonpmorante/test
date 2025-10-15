@@ -40,8 +40,8 @@ function getBaseUrl(req) {
 // DB_NAME=drugstore
 // DB_PORT=3306
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
+    host: process.env.DB_HOST || process.env.MYSQLHOST || '',
+    user: process.env.DB_USER || process.env.MYSQLUSER || '',
      password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
     database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'drugstore',
     port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : (process.env.MYSQLPORT ? parseInt(process.env.MYSQLPORT, 10) : 3306),
