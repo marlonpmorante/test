@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+<<<<<<< HEAD
 import { apiUrl } from '../config';
+=======
+>>>>>>> f53c35118a387dbee12a2e7df9a312dc9a91bfb9
 import { FaBan, FaPrint, FaMoneyBillWave, FaBarcode, FaBoxOpen, FaShoppingCart } from 'react-icons/fa';
 
 
