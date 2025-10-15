@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../../config';
 import { FaPrint, FaEye, FaTrash } from 'react-icons/fa';
 
 export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGoBack }) {
@@ -17,7 +18,7 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
   const fetchReceipts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/receipts');
+      const response = await fetch(apiUrl('/receipts'));
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -41,7 +42,7 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
   const handleViewReceiptDetails = async (receiptId) => {
     try {
       setLoadingDetails(true); // Set loading for details
-      const res = await fetch(`http://localhost:5000/api/receipts/${receiptId}`);
+      const res = await fetch(apiUrl(`/receipts/${receiptId}`));
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
@@ -81,7 +82,7 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
   const handleConfirmDelete = async () => {
     if (receiptToDelete) {
       try {
-        const response = await fetch(`http://localhost:5000/api/receipts/${receiptToDelete.id}`, {
+        const response = await fetch(apiUrl(`/receipts/${receiptToDelete.id}`), {
           method: 'DELETE',
         });
         if (!response.ok) {

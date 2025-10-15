@@ -1,6 +1,7 @@
 // src/components/LoginForm.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiUrl } from '../config';
 import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import BackgroundImage from '../assets/background.jpg'; //
 import LogoImage from '../assets/logo.png';       //
@@ -25,7 +26,7 @@ const LoginForm = ({ onLogin }) => { //
     setIsSubmitting(true); //
 
     try {
-      const response = await fetch('http://localhost:5000/api/login', { //
+      const response = await fetch(apiUrl('/login'), { //
         method: 'POST', //
         headers: { //
           'Content-Type': 'application/json', //

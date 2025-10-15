@@ -6,6 +6,7 @@ import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 
 // 2. The rest of your imports follow below:
 import InventoryForm from '../components/InventoryForm';
+import { apiUrl } from '../config';
 import Orders from '../components/inventorybody/orders';
 import StockReport from '../components/inventorybody/StockReport';
 import AddMember from '../components/AddUser';
@@ -29,7 +30,7 @@ const ProductSummaryDashboard = ({ showMessageBox }) => {
       try {
         setLoading(true);
         // Fetch products
-        const productsResponse = await fetch('http://localhost:5000/api/products');
+        const productsResponse = await fetch(apiUrl('/products'));
         if (!productsResponse.ok) {
           throw new Error(`HTTP error! status: ${productsResponse.status} for products`);
         }
@@ -37,7 +38,7 @@ const ProductSummaryDashboard = ({ showMessageBox }) => {
         setProducts(productsData);
 
         // Fetch categories
-        const categoriesResponse = await fetch('http://localhost:5000/api/categories');
+        const categoriesResponse = await fetch(apiUrl('/categories'));
         if (!categoriesResponse.ok) {
           throw new Error(`HTTP error! status: ${categoriesResponse.status} for categories`);
         }
@@ -99,7 +100,7 @@ const ReceiptSummaryDashboard = ({ showMessageBox }) => {
     const fetchReceipts = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/receipts');
+        const response = await fetch(apiUrl('/receipts'));
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -147,7 +148,7 @@ const DailySalesSummary = ({ showMessageBox }) => {
       try {
         setLoading(true);
         const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`http://localhost:5000/api/sales-report?startDate=${today}&endDate=${today}`);
+        const response = await fetch(apiUrl(`/sales-report?startDate=${today}&endDate=${today}`));
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

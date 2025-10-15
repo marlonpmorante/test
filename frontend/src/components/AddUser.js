@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../config';
 import { User, Lock, Shield, Eye, EyeOff, XCircle } from 'lucide-react';
 
 const AddUser = () => {
@@ -50,7 +51,7 @@ const AddUser = () => {
     const fetchUsers = async () => {
         setListMessage('');
         try {
-            const res = await fetch('http://localhost:5000/api/users'); // Assuming an endpoint to get all users
+            const res = await fetch(apiUrl('/users')); // Assuming an endpoint to get all users
             const data = await res.json();
             if (res.ok) {
                 setUsers(data);
@@ -84,8 +85,8 @@ const AddUser = () => {
         }
 
         try {
-            const res = await fetch('http://localhost:5000/api/users', {
-                method: 'POST',
+            const res = await fetch(apiUrl('/users'), {
+               method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password, role }),
             });
@@ -118,7 +119,7 @@ const AddUser = () => {
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
+            const res = await fetch(apiUrl(`/users/${userId}`), {
                 method: 'DELETE',
             });
 

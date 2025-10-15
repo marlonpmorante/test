@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../../config';
 import { FaSearch, FaCalendarAlt } from 'react-icons/fa';
 
 const SalesReport = () => {
@@ -15,7 +16,7 @@ const SalesReport = () => {
   useEffect(() => {
     const fetchSalesData = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/sales-report');
+        const res = await fetch(apiUrl('/sales-report'));
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         setSalesData(data);
