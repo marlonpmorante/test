@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaSearch, FaTimesCircle, FaCheckCircle } from 'react-icons/fa'; // Importing icons
+import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaSearch, FaCheckCircle } from 'react-icons/fa'; // Importing icons
 
 const sampleProducts = [
   { id: 1, name: 'Paracetamol 500mg', price: 5, image: 'https://via.placeholder.com/100?text=Paracetamol' },
