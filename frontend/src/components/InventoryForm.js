@@ -1145,7 +1145,7 @@ export default function InventoryForm() {
         }
 
         .ui-payment-details {
-          padding-top: 20px;
+          padding-top: 2px;
           border-top: 2px dashed #B0BEC5;
         }
 
