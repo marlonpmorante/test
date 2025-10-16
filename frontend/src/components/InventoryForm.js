@@ -810,6 +810,7 @@ export default function InventoryForm() {
           display: flex;
           align-items: center;
           gap: 5px;
+          min-width: 200px;
         }
 
         .product-actions input {
@@ -1052,6 +1053,7 @@ export default function InventoryForm() {
           border: 1px solid #DCDCDC;
           height: 100%;
           justify-content: space-between;
+          overflow-y: auto;
         }
 
         .ui-form-group {
@@ -1083,7 +1085,11 @@ export default function InventoryForm() {
           font-weight: 600;
           cursor: pointer;
           transition: background-color 0.3s;
+          white-space: nowrap;
         }
+
+        .ui-button-primary { background-color: #00796B; color: #fff; }
+        .ui-button-primary:hover { background-color: #0a8a7b; }
 
         .ui-button-secondary {
           background-color: #607D8B;
@@ -1249,7 +1255,7 @@ export default function InventoryForm() {
             </div>
           </div>
           <div className="ui-table-container">
-            <table className="ui-table">
+            <table className="ui-table products-table">
               <thead>
                 <tr>
                   <th>Name</th>
