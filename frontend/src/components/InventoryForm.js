@@ -1006,6 +1006,7 @@ export default function InventoryForm() {
         /* NEW CSS based on the image */
         .grid-container {
           display: grid;
+          font-size: .8rem;
           grid-template-columns: 1.3fr 1.3fr 1.2fr; /* Three columns as per the image */
           gap: 20px;
           padding: 20px;
