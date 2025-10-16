@@ -1047,6 +1047,7 @@ export default function InventoryForm() {
           display: flex;
           flex-direction: column;
           gap: 20px;
+          padding-top: -20px:
           background: #FFFFFF;
           border-radius: 20px;
           padding: 25px;
