@@ -1,28 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiUrl } from '../config';
-import { FaBan, FaPrint, FaMoneyBillWave, FaBarcode, FaBoxOpen, FaShoppingCart } from 'react-icons/fa';
-
-
-// Helper functions lifted to top-level for stability in hooks
-const getFullProductName = (product) => {
-  const supplierName = product.supplierName || '';
-  const brandName = product.brandName || '';
-  const medicineName = product.medicineName || '';
-  const form = product.form || '';
-  const strength = product.strength || '';
-  return `${supplierName} (${brandName}) - ${medicineName}, ${form}, ${strength}`;
-};
-
-const formatDateTimeForMySQL = (dateString) => {
-  const date = new Date(dateString);
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
+import { FaSave, FaBan, FaSearch, FaPrint, FaMoneyBillWave, FaBarcode, FaBoxOpen, FaDollarSign, FaClipboardList, FaShoppingCart } from 'react-icons/fa';
 
 export default function InventoryForm() {
   const [cart, setCart] = useState([]);
@@ -62,6 +40,15 @@ export default function InventoryForm() {
     }
   }, [isScanMode]);
 
+  const getFullProductName = (product) => {
+    const supplierName = product.supplierName || '';
+    const brandName = product.brandName || '';
+    const medicineName = product.medicineName || '';
+    const form = product.form || '';
+    const strength = product.strength || '';
+    return `${supplierName} (${brandName}) - ${medicineName}, ${form}, ${strength}`;
+  };
+
   const handleProductQuantityChange = (productId, value) => {
     const newQuantity = parseInt(value) || 1;
     setProductQuantities(prev => ({
@@ -70,9 +57,9 @@ export default function InventoryForm() {
     }));
   };
 
-  const handleAddToCart = useCallback((productToAdd, quantity) => {
-    if (!productToAdd) { alert('Select a product first'); return; }
-    if (quantity < 1) { alert('Quantity must be at least 1'); return; }
+  const handleAddToCart = (productToAdd, quantity) => {
+    if (!productToAdd) return alert('Select a product first');
+    if (quantity < 1) return alert('Quantity must be at least 1');
 
     if (productToAdd.quantity < quantity) {
       alert(`Not enough stock for ${getFullProductName(productToAdd)}. Available: ${productToAdd.quantity}`);
@@ -83,24 +70,22 @@ export default function InventoryForm() {
       return;
     }
 
-    setCart((previousCart) => {
-      const existingIndex = previousCart.findIndex(item => item.id === productToAdd.id);
-      const updatedCart = [...previousCart];
+    const existingIndex = cart.findIndex(item => item.id === productToAdd.id);
+    let updatedCart = [...cart];
 
     const productCartEntry = {
-        id: productToAdd.id,
-        name: getFullProductName(productToAdd),
-        price: parseFloat(productToAdd.price),
-        quantity: quantity
-      };
+      id: productToAdd.id,
+      name: getFullProductName(productToAdd),
+      price: parseFloat(productToAdd.price),
+      quantity: quantity
+    };
 
     if (existingIndex >= 0) {
-        updatedCart[existingIndex].quantity += quantity;
-      } else {
-        updatedCart.push(productCartEntry);
-      }
-      return updatedCart;
-    });
+      updatedCart[existingIndex].quantity += quantity;
+    } else {
+      updatedCart.push(productCartEntry);
+    }
+    setCart(updatedCart);
 
     setProducts(prevProducts =>
       prevProducts.map(p =>
@@ -114,7 +99,7 @@ export default function InventoryForm() {
       ...prev,
       [productToAdd.id]: 1
     }));
- }, []);
+  };
 
   const handleScanProduct = (productId) => {
     const product = products.find(p => (p.medicineId || p.id).toString() === productId.toString());
@@ -188,6 +173,17 @@ export default function InventoryForm() {
   const vatRate = 0.12;
   const vatableSale = netPay / (1 + vatRate);
   const vatAmount = netPay - vatableSale;
+
+  const formatDateTimeForMySQL = (dateString) => {
+    const date = new Date(dateString);
+    const year = String(date.getFullYear());
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
 
   const handlePrint = useCallback(async () => {
     const currentReceipt = {
@@ -375,7 +371,7 @@ export default function InventoryForm() {
       console.error('Error saving receipt:', error);
       alert('Error saving receipt. Please check server connection.');
     }
-  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
+  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount, formatDateTimeForMySQL]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
