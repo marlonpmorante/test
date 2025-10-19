@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaSearch, FaCheckCircle } from 'react-icons/fa'; // Importing icons
+import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaSearch, FaCheckCircle, FaEye } from 'react-icons/fa'; // Importing icons
+import ShoppingCartModal from '../ShoppingCartModal';
 
 const sampleProducts = [
   { id: 1, name: 'Paracetamol 500mg', price: 5, image: 'https://via.placeholder.com/100?text=Paracetamol' },
@@ -13,6 +14,7 @@ const Orders = () => {
   const [showCatalog, setShowCatalog] = useState(true);
   const [customerInfo, setCustomerInfo] = useState({ name: '', contact: '', address: '', type: 'Pickup' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCartModal, setShowCartModal] = useState(false);
 
   // Add product to the cart
   const handleAddToCart = (product) => {
@@ -78,6 +80,28 @@ const Orders = () => {
     setSearchQuery('');
   };
 
+    // Handle cart modal
+  const handleOpenCartModal = () => {
+    setShowCartModal(true);
+  };
+
+  const handleCloseCartModal = () => {
+    setShowCartModal(false);
+  };
+
+  const handleUpdateQuantity = (id, newQuantity) => {
+    if (newQuantity <= 0) {
+      handleDeleteItem(id);
+    } else {
+      setCart(cart.map((item) =>
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      ));
+    }
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+  };
   // Filter products based on search query
   const filteredProducts = sampleProducts.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -122,7 +146,12 @@ const Orders = () => {
 
       {!showCatalog && (
         <>
-          <h3>Shopping Cart</h3>
+          <div className="cart-header">
+            <h3>Shopping Cart</h3>
+            <button className="view-cart-btn" onClick={handleOpenCartModal}>
+              <FaEye /> View Cart Details ({cart.length})
+            </button>
+          </div>
           {cart.length === 0 ? (
             <p>No items in cart.</p>
           ) : (
@@ -169,6 +198,17 @@ const Orders = () => {
         </>
       )}
 
+
+      {/* Shopping Cart Modal */}
+      <ShoppingCartModal
+        isOpen={showCartModal}
+        onClose={handleCloseCartModal}
+        cart={cart}
+        onRemoveFromCart={handleDeleteItem}
+        onUpdateQuantity={handleUpdateQuantity}
+        onClearCart={handleClearCart}
+      />
+        
       {salesData.length > 0 && (
         <>
           <h3>Sales Report</h3>
@@ -291,6 +331,34 @@ const Orders = () => {
 
         .delete-btn:hover {
           background-color: #d32f2f;
+        }
+        .cart-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .view-cart-btn {
+          background: linear-gradient(45deg, #667eea, #764ba2);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          padding: 8px 16px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .view-cart-btn:hover {
+          background: linear-gradient(45deg, #764ba2, #667eea);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
       `}</style>
     </div>
