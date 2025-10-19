@@ -223,7 +223,7 @@ export default function InventoryForm() {
   
     setCurrentReceipt(receiptData);
     setShowReceiptModal(true);
-  };
+  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
 
   const handleCloseReceiptModal = () => {
     setShowReceiptModal(false);
@@ -301,8 +301,8 @@ export default function InventoryForm() {
 
   const handlePrint = useCallback(() => {
     handleOpenReceiptModal();
-  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
-
+  }, [handleOpenReceiptModal]);
+  
   useEffect(() => {
     const handleKeyDown = (event) => {
       // Defensive check to prevent TypeError
