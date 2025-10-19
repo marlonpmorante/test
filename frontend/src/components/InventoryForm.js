@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiUrl } from '../config';
 import { FaBan, FaPrint, FaMoneyBillWave, FaBarcode, FaBoxOpen, FaShoppingCart } from 'react-icons/fa';
-
+import ShoppingCartModal from './ShoppingCartModal';
+import ReceiptModal from './ReceiptModal';
 
 // Helper functions lifted to top-level for stability in hooks
 const getFullProductName = (product) => {
@@ -34,6 +35,9 @@ export default function InventoryForm() {
   const [discountType, setDiscountType] = useState('none');
   const [customDiscount, setCustomDiscount] = useState(0);
   const [isScanMode, setIsScanMode] = useState(true);
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
   const scanInputRef = useRef(null);
 
   useEffect(() => {
@@ -174,23 +178,34 @@ export default function InventoryForm() {
 
   const handleClearCart = useCallback(() => setCart([]), []);
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountRates = {
-    none: 0,
-    senior: 20,
-    pwd: 20,
-    student: 10,
+  const handleUpdateQuantity = (itemId, newQuantity) => {
+    setCart(prevCart => 
+      prevCart.map(item => 
+        item.id === itemId ? { ...item, quantity: newQuantity } : item
+      )
+    );
   };
-  const effectiveDiscountPercent = discountType === 'custom' ? customDiscount : discountRates[discountType];
-  const discountAmount = (totalPrice * effectiveDiscountPercent) / 100;
-  const netPay = totalPrice - discountAmount;
-  const change = (parseFloat(cashGiven) || 0) - netPay;
-  const vatRate = 0.12;
-  const vatableSale = netPay / (1 + vatRate);
-  const vatAmount = netPay - vatableSale;
 
-  const handlePrint = useCallback(async () => {
-    const currentReceipt = {
+  const handleOpenCartModal = () => {
+    setShowCartModal(true);
+  };
+
+  const handleCloseCartModal = () => {
+    setShowCartModal(false);
+  };
+
+  const handleOpenReceiptModal = () => {
+    if (cart.length === 0) {
+      alert('Cart is empty. Nothing to print.');
+      return;
+    }
+    
+    if (parseFloat(cashGiven) < netPay) {
+      alert('Cash given is less than the net payable amount.');
+      return;
+    }
+
+    const receiptData = {
       customer: customer,
       cart: cart,
       totalPrice: totalPrice,
@@ -205,130 +220,19 @@ export default function InventoryForm() {
       vatAmount: vatAmount,
       transaction_date: new Date().toISOString(),
     };
+  
+    setCurrentReceipt(receiptData);
+    setShowReceiptModal(true);
+  };
 
-    if (currentReceipt.cart.length === 0) {
-      alert('Cart is empty. Nothing to print.');
-      return;
-    }
-    
-    if (currentReceipt.cashGiven < currentReceipt.netPay) {
-      alert('Cash given is less than the net payable amount.');
-      return;
-    }
+  const handleCloseReceiptModal = () => {
+    setShowReceiptModal(false);
+    setCurrentReceipt(null);
+  };
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Sales Receipt</title>
-          <style>
-            body { font-family: monospace; font-size: 10px; }
-            .receipt { width: 280px; margin: 0 auto; padding: 10px; border: 1px dashed #000; }
-            .header { text-align: center; margin-bottom: 5px; line-height: 1.1; }
-            .trans-info { margin-bottom: 5px; font-size: 0.9em; }
-            .items { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-            .items th, .items td { padding: 2px 5px; text-align: left; border-bottom: 1px dotted #ccc; }
-            .items th { font-weight: bold; }
-            .total-section { text-align: right; margin-bottom: 2px; font-size: 0.9em; }
-            .total-section.bold { font-weight: bold; }
-            .footer { text-align: center; margin-top: 10px; font-size: 0.8em; }
-            .customer-info { margin-top: 10px; font-size: 0.9em; border-top: 1px dashed #000; padding-top: 5px; }
-            .customer-field { margin-bottom: 3px; }
-            .value { float: right; }
-             .payment-info { margin-top: 10px; font-size: 0.9em; border-top: 1px dashed #000; padding-top: 5px; }
-          </style>
-        </head>
-        <body>
-          <div class="receipt">
-            <div class="header">
-              <p>R.B. Gonzales Pharmacy</p>
-              <p>MUNICIPALITY OF BOLALACAO, ISLAND OF MINDORO</p>
-              <p>Campaasan, Bulalacao, Oriental Mindoro</p>
-              <p>VAT REG TIN: 201-277-095-00328</p>
-              <p>MIN: 17111713493850977 S/N: 41-BAWXH</p>
-              <p>SALES INVOICE</p>
-            </div>
-            <div class="trans-info">
-              <p>Trans. Date: ${new Date(currentReceipt.transaction_date).toLocaleDateString('en-PH', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })} ${new Date(currentReceipt.transaction_date).toLocaleTimeString('en-PH', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })}</p>
-              <p>PST 384-006-00224713 TH 3840060000235221</p>
-              <p>C: 171 ${currentReceipt.customer.name || 'GUEST'} / B: 1 Bagger</p>
-            </div>
+  const handleSaveReceipt = async () => {
+    if (!currentReceipt) return;
 
-            <table class="items">
-              <thead>
-                <tr><th>Qty</th><th>Desc</th><th style="text-align: right;">Amt</th></tr>
-              </thead>
-              <tbody>
-                ${currentReceipt.cart
-        .map(
-          (item) => `
-                <tr>
-                  <td>${item.quantity}</td>
-                  <td>${typeof item.name === 'string' ? item.name.substring(0, 20) : ''}</td>
-                  <td style="text-align: right;">${(
-              item.price * item.quantity
-            ).toFixed(2)}</td>
-                </tr>
-              `
-        )
-        .join('')}
-              </tbody>
-            </table>
-
-            <div class="total-section">
-              Subtotal <span class="value">${currentReceipt.totalPrice.toFixed(2)}</span>
-            </div>
-            <div class="total-section">
-              Total Discount (${currentReceipt.discountType === 'none' ? '0' : currentReceipt.discountType}) (${currentReceipt.discountPercent.toFixed(2)}%) <span class="value">${currentReceipt.discountAmount.toFixed(2)}</span>
-            </div>
-            <div class="total-section bold">
-              Total <span class="value">${currentReceipt.netPay.toFixed(2)}</span>
-            </div>
-              <div class="total-section">
-              CASH <span class="value">${currentReceipt.cashGiven.toFixed(2)}</span>
-            </div>
-            <div class="total-section">
-              CHANGE <span class="value">${currentReceipt.change.toFixed(2)}</span>
-            </div>
-
-            <div class="other-info">
-              <p>Item Purchased: ${currentReceipt.cart.reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    )}</p>
-              <p>
-                VATable Sale (V) <span class="value">${currentReceipt.vatableSale.toFixed(2)}</span>
-              </p>
-              <p>
-                VAT (${(vatRate * 100).toFixed(0)}%) <span class="value">${currentReceipt.vatAmount.toFixed(2)}</span>
-              </p>
-              <p>VAT Exempt Sale (E) <span class="value">0.00</span></p>
-              <p>Zero Rated Sale (Z) <span class="value">0.00</span></p>
-            </div>
-
-             <div class="payment-info">
-                <p>Payment Method: <span class="value">Cash</span></p>
-            </div>
-
-            <div class="footer">
-              <p>THANK YOU FOR SHOPPING</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-
-    // After printing, save the receipt and clear the cart
     const dataToSend = {
       customerName: currentReceipt.customer.name,
       customerAddress: currentReceipt.customer.address,
@@ -367,6 +271,9 @@ export default function InventoryForm() {
         setCashGiven('');
         setDiscountType('none');
         setCustomDiscount(0);
+        setShowReceiptModal(false);
+        setCurrentReceipt(null);
+        alert('Receipt saved successfully!');
       } else {
         console.error('Failed to save receipt:', data.error);
         alert('Failed to save receipt: ' + data.error);
@@ -375,6 +282,25 @@ export default function InventoryForm() {
       console.error('Error saving receipt:', error);
       alert('Error saving receipt. Please check server connection.');
     }
+    };
+
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discountRates = {
+    none: 0,
+    senior: 20,
+    pwd: 20,
+    student: 10,
+  };
+  const effectiveDiscountPercent = discountType === 'custom' ? customDiscount : discountRates[discountType];
+  const discountAmount = (totalPrice * effectiveDiscountPercent) / 100;
+  const netPay = totalPrice - discountAmount;
+  const change = (parseFloat(cashGiven) || 0) - netPay;
+  const vatRate = 0.12;
+  const vatableSale = netPay / (1 + vatRate);
+  const vatAmount = netPay - vatableSale;
+
+  const handlePrint = useCallback(() => {
+    handleOpenReceiptModal();
   }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
 
   useEffect(() => {
@@ -1030,12 +956,35 @@ export default function InventoryForm() {
         .ui-card-header {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           margin-bottom: 20px;
           font-size: 1.8em;
           font-weight: 700;
           color: #00796B; /* Teal color */
           border-left: 6px solid #FF5722; /* Orange accent */
           padding-left: 15px;
+        }
+
+        .cart-button {
+          background: linear-gradient(45deg, #667eea, #764ba2);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          padding: 8px 16px;
+          font-size: 0.8em;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .cart-button:hover {
+          background: linear-gradient(45deg, #764ba2, #667eea);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         .ui-card-header svg {
@@ -1302,6 +1251,13 @@ export default function InventoryForm() {
         <div className="ui-card">
           <div className="ui-card-header">
             <FaShoppingCart /> Shopping Cart
+          <button 
+              className="cart-button" 
+              onClick={handleOpenCartModal}
+              title="View Cart Details"
+            >
+              <FaShoppingCart /> View Cart ({cart.length})
+            </button>
           </div>
           <div className="ui-cart-section">
             <div className="ui-cart-list">
@@ -1409,6 +1365,27 @@ export default function InventoryForm() {
           </div>
         </div>
       </div>
+                  
+      {/* Shopping Cart Modal */}
+      <ShoppingCartModal
+        isOpen={showCartModal}
+        onClose={handleCloseCartModal}
+        cart={cart}
+        onRemoveFromCart={handleRemoveFromCart}
+        onUpdateQuantity={handleUpdateQuantity}
+        onClearCart={handleClearCart}
+      />
+
+      {/* Receipt Modal */}
+      <ReceiptModal
+        isOpen={showReceiptModal}
+        onClose={handleCloseReceiptModal}
+        receiptData={currentReceipt}
+        onPrint={() => {
+          // Print functionality is handled within the modal
+        }}
+        onSave={handleSaveReceipt}
+      />
     </>
   );
 }
