@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaPrint, FaTimes, FaDownload, FaEye } from 'react-icons/fa';
+import { FaPrint, FaTimes, FaDownload } from 'react-icons/fa';
 
 const ReceiptModal = ({ isOpen, onClose, receiptData, onPrint, onSave }) => {
   if (!isOpen || !receiptData) return null;
