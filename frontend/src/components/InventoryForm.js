@@ -178,7 +178,7 @@ export default function InventoryForm() {
 
   const handleClearCart = useCallback(() => setCart([]), []);
 
-  const handleUpdateQuantity = (itemId, newQuantity) => {
+    const handleUpdateQuantity = (itemId, newQuantity) => {
     setCart(prevCart => 
       prevCart.map(item => 
         item.id === itemId ? { ...item, quantity: newQuantity } : item
@@ -193,37 +193,6 @@ export default function InventoryForm() {
   const handleCloseCartModal = () => {
     setShowCartModal(false);
   };
-
-  const handleOpenReceiptModal = () => {
-    if (cart.length === 0) {
-      alert('Cart is empty. Nothing to print.');
-      return;
-    }
-    
-    if (parseFloat(cashGiven) < netPay) {
-      alert('Cash given is less than the net payable amount.');
-      return;
-    }
-
-    const receiptData = {
-      customer: customer,
-      cart: cart,
-      totalPrice: totalPrice,
-      discountPercent: effectiveDiscountPercent,
-      discountType: discountType,
-      discountAmount: discountAmount,
-      netPay: netPay,
-      cashGiven: parseFloat(cashGiven) || 0,
-      change: change,
-      paymentMethod: 'cash',
-      vatableSale: vatableSale,
-      vatAmount: vatAmount,
-      transaction_date: new Date().toISOString(),
-    };
-  
-    setCurrentReceipt(receiptData);
-    setShowReceiptModal(true);
-  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
 
   const handleCloseReceiptModal = () => {
     setShowReceiptModal(false);
@@ -282,7 +251,7 @@ export default function InventoryForm() {
       console.error('Error saving receipt:', error);
       alert('Error saving receipt. Please check server connection.');
     }
-    };
+      };
 
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountRates = {
@@ -299,10 +268,41 @@ export default function InventoryForm() {
   const vatableSale = netPay / (1 + vatRate);
   const vatAmount = netPay - vatableSale;
 
+  const handleOpenReceiptModal = useCallback(() => {
+    if (cart.length === 0) {
+      alert('Cart is empty. Nothing to print.');
+      return;
+    }
+    
+    if (parseFloat(cashGiven) < netPay) {
+      alert('Cash given is less than the net payable amount.');
+      return;
+    }
+
+    const receiptData = {
+      customer: customer,
+      cart: cart,
+      totalPrice: totalPrice,
+      discountPercent: effectiveDiscountPercent,
+      discountType: discountType,
+      discountAmount: discountAmount,
+      netPay: netPay,
+      cashGiven: parseFloat(cashGiven) || 0,
+      change: change,
+      paymentMethod: 'cash',
+      vatableSale: vatableSale,
+      vatAmount: vatAmount,
+      transaction_date: new Date().toISOString(),
+    };
+    
+    setCurrentReceipt(receiptData);
+    setShowReceiptModal(true);
+  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
+
   const handlePrint = useCallback(() => {
     handleOpenReceiptModal();
   }, [handleOpenReceiptModal]);
-  
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       // Defensive check to prevent TypeError
