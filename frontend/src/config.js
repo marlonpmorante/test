@@ -37,6 +37,8 @@ export const API_BASE_URL = normalizedBackend
 
 export const apiUrl = (path) => `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 
+// Password required to delete cart items at POS
+export const DELETE_PASSWORD = process.env.REACT_APP_DELETE_PASSWORD || '1234';
 
 if (typeof window !== 'undefined') {
   // Helps verify which base URL is in use at runtime
