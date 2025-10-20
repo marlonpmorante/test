@@ -318,7 +318,7 @@ export default function InventoryForm() {
           break;
         case 'c':
           // Clear cart button
-          handleClearCart();
+          setCart([]);
           break;
         default:
           break;
