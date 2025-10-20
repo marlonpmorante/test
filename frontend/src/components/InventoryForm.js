@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { apiUrl } from '../config';
-import { FaBan, FaPrint, FaShoppingCart, FaKeyboard } from 'react-icons/fa';
+import { apiUrl, DELETE_PASSWORD } from '../config';
+import { FaBan, FaPrint, FaShoppingCart } from 'react-icons/fa';
 import ReceiptModal from './ReceiptModal';
 import PaymentModal from './PaymentModal';
-import ManualAddModal from './ManualAddModal';
 
 // Helper functions lifted to top-level for stability in hooks
 const getFullProductName = (product) => {
@@ -35,10 +34,10 @@ export default function InventoryForm() {
   const [discountType, setDiscountType] = useState('none');
   const [customDiscount, setCustomDiscount] = useState(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showManualAdd, setShowManualAdd] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState(null);
   const scanInputRef = useRef(null);
+  const [scanQuantity, setScanQuantity] = useState(1);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -61,46 +60,6 @@ export default function InventoryForm() {
     }
   }, []);
 
-  const handleAddToCart = useCallback((productToAdd, quantity) => {
-    if (!productToAdd) { alert('Select a product first'); return; }
-    if (quantity < 1) { alert('Quantity must be at least 1'); return; }
-
-    if (productToAdd.quantity < quantity) {
-      alert(`Not enough stock for ${getFullProductName(productToAdd)}. Available: ${productToAdd.quantity}`);
-      return;
-    }
-    if (productToAdd.quantity === 0) {
-      alert(`${getFullProductName(productToAdd)} is out of stock.`);
-      return;
-    }
-
-    setCart((previousCart) => {
-      const existingIndex = previousCart.findIndex(item => item.id === productToAdd.id);
-      const updatedCart = [...previousCart];
-
-    const productCartEntry = {
-        id: productToAdd.id,
-        name: getFullProductName(productToAdd),
-        price: parseFloat(productToAdd.price),
-        quantity: quantity
-      };
-
-    if (existingIndex >= 0) {
-        updatedCart[existingIndex].quantity += quantity;
-      } else {
-        updatedCart.push(productCartEntry);
-      }
-      return updatedCart;
-    });
-
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productToAdd.id
-          ? { ...p, quantity: p.quantity - quantity }
-          : p
-      )
-    );
- }, []);
 
   const findProductByCode = (code) => {
     return products.find(p => {
@@ -113,14 +72,14 @@ export default function InventoryForm() {
     });
   };
 
-  const handleScanProduct = (code) => {
+  const handleScanProduct = (code, quantity = 1) => {
     const product = findProductByCode(code);
     if (product) {
       if (product.quantity === 0) {
         alert(`${getFullProductName(product)} is out of stock.`);
         return;
       }
-      if (product.quantity < 1) {
+      if (product.quantity < quantity) {
         alert(`Not enough stock for ${getFullProductName(product)}. Available: ${product.quantity}`);
         return;
       }
@@ -132,11 +91,11 @@ export default function InventoryForm() {
         id: product.id,
         name: getFullProductName(product),
         price: parseFloat(product.price),
-        quantity: 1
+        quantity: quantity
       };
 
       if (existingIndex >= 0) {
-        updatedCart[existingIndex].quantity += 1;
+        updatedCart[existingIndex].quantity += quantity;
       } else {
         updatedCart.push(productToAdd);
       }
@@ -145,7 +104,7 @@ export default function InventoryForm() {
       setProducts(prevProducts =>
         prevProducts.map(p =>
           p.id === product.id
-            ? { ...p, quantity: p.quantity - 1 }
+            ? { ...p, quantity: p.quantity - quantity }
             : p
         )
       )
@@ -155,17 +114,13 @@ export default function InventoryForm() {
     }
   };
 
-  const handleManualAddConfirm = ({ code, quantity }) => {
-    const product = findProductByCode(code);
-    if (!product) {
-      alert('Product not found with code: ' + code);
+  const handleRemoveFromCart = (productId) => {
+    const providedPassword = window.prompt('Enter password to remove item from cart:');
+    if (!providedPassword) return;
+    if (String(providedPassword) !== String(DELETE_PASSWORD || '')) {
+      alert('Incorrect password.');
       return;
     }
-    handleAddToCart(product, quantity);
-    setShowManualAdd(false);
-  };
-
-  const handleRemoveFromCart = (productId) => {
     const itemToRemove = cart.find(item => item.id === productId);
     if (!itemToRemove) return;
 
@@ -292,7 +247,7 @@ export default function InventoryForm() {
       }
       
       // Prevent default behavior for keys that might have native actions (e.g., space scrolls)
-      if (['Enter', 'p', 'c', 'Backspace'].includes(event.key.toLowerCase())) {
+      if (['Enter', 'p', 'Backspace'].includes(event.key.toLowerCase())) {
         event.preventDefault();
       }
 
@@ -307,10 +262,6 @@ export default function InventoryForm() {
           // Print button
           handlePrint();
           break;
-        case 'c':
-          // Clear cart button
-          handleClearCart();
-          break;
         default:
           break;
       }
@@ -321,7 +272,7 @@ export default function InventoryForm() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handlePrint, handleClearCart]);
+  }, [handlePrint]);
 
   if (loading) return <div className="loading-message">Loading products...</div>;
 
@@ -898,14 +849,14 @@ export default function InventoryForm() {
         /* NEW CSS based on the image */
         .grid-container {
           display: grid;
-          font-size: .8rem;
-          grid-template-columns: 1.3fr 1.3fr 1.2fr; /* Three columns as per the image */
+          grid-template-columns: 1fr; /* Single centered column */
+          justify-items: center;
           gap: 20px;
           padding: 20px;
           height: 80vh;
           width: 100%;
           overflow: hidden;
-          background: linear-gradient(135deg, #E0F2F1 0%, #B2EBF2 100%); /* Light blueish gradient */
+          background: linear-gradient(135deg, #E0F2F1 0%, #B2EBF2 100%);
         }
 
         .ui-card {
@@ -917,6 +868,8 @@ export default function InventoryForm() {
           flex-direction: column;
           border: 1px solid #DCDCDC;
           height: 100%;
+          width: min(1200px, 95vw);
+          font-size: 0.9rem; /* Slightly smaller text */
         }
 
         .ui-card-header {
@@ -924,7 +877,7 @@ export default function InventoryForm() {
           align-items: center;
           justify-content: space-between;
           margin-bottom: 20px;
-          font-size: 1.8em;
+          font-size: 1.4em; /* Slightly smaller */
           font-weight: 700;
           color: #00796B; /* Teal color */
           border-left: 6px solid #FF5722; /* Orange accent */
@@ -1058,6 +1011,31 @@ export default function InventoryForm() {
           overflow-y: auto;
           border-left: 5px solid #00796B; /* Vertical bar */
           padding-left: 15px;
+          max-height: calc(100% - 180px); /* Keep actions visible */
+        }
+        /* Keep Print button visible */
+        .ui-payment-actions {
+          position: sticky;
+          bottom: 0;
+          background: #fff;
+          padding: 12px 0;
+          border-top: 1px solid #E0E0E0;
+          z-index: 2;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        /* Clamp long item names to two lines */
+        .ui-table td:first-child {
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .qty-input {
+          width: 80px;
+          text-align: center;
         }
 
         .ui-payment-details {
@@ -1162,11 +1140,21 @@ export default function InventoryForm() {
                   if (e.key === 'Enter') {
                     const value = e.currentTarget.value.trim();
                     if (value) {
-                      handleScanProduct(value);
+                      const qty = Number.isFinite(Number(scanQuantity)) && Number(scanQuantity) > 0 ? Number(scanQuantity) : 1;
+                      handleScanProduct(value, qty);
                       e.currentTarget.value = '';
                     }
                   }
                 }}
+              />
+              <input
+                type="number"
+                id="scanQty"
+                min="1"
+                className="ui-input qty-input"
+                placeholder="Qty"
+                value={scanQuantity}
+                onChange={(e) => setScanQuantity(Math.max(1, Number(e.target.value) || 1))}
               />
               <button className="ui-button ui-button-secondary" onClick={() => setShowManualAdd(true)}>
                 <FaKeyboard /> Manual Add
@@ -1220,9 +1208,6 @@ export default function InventoryForm() {
             <button className="ui-button ui-button-success" onClick={handlePrint} data-action="print" disabled={cart.length === 0}>
               <FaPrint /> Print
             </button>
-            <button className="ui-button ui-button-clear" onClick={handleClearCart} data-action="clear" disabled={cart.length === 0}>
-              <FaBan /> Clear cart
-            </button>
           </div>
         </div>
       </div>
@@ -1237,14 +1222,6 @@ export default function InventoryForm() {
         defaultCashGiven={cashGiven}
         onConfirm={handlePaymentConfirm}
       />
-
-      {/* Manual Add Modal */}
-      <ManualAddModal
-        isOpen={showManualAdd}
-        onClose={() => setShowManualAdd(false)}
-        onAdd={handleManualAddConfirm}
-      />
-
       {/* Receipt Modal */}
       <ReceiptModal
         isOpen={showReceiptModal}
