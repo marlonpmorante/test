@@ -235,10 +235,6 @@ export default function InventoryForm() {
     setShowPaymentModal(true);
   }, [cart.length]);
 
-  const handleClearCart = useCallback(() => {
-    setCart([]);
-  }, []);
-
   useEffect(() => {
     const handleKeyDown = (event) => {
       // Defensive check to prevent TypeError
