@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiUrl } from '../config';
-import { FaBan, FaPrint, FaMoneyBillWave, FaBarcode, FaBoxOpen, FaShoppingCart } from 'react-icons/fa';
-import ShoppingCartModal from './ShoppingCartModal';
+import { FaBan, FaPrint, FaBarcode, FaShoppingCart, FaKeyboard } from 'react-icons/fa';
 import ReceiptModal from './ReceiptModal';
+import PaymentModal from './PaymentModal';
+import ManualAddModal from './ManualAddModal';
 
 // Helper functions lifted to top-level for stability in hooks
 const getFullProductName = (product) => {
@@ -34,8 +35,8 @@ export default function InventoryForm() {
   const [cashGiven, setCashGiven] = useState('');
   const [discountType, setDiscountType] = useState('none');
   const [customDiscount, setCustomDiscount] = useState(0);
-  const [isScanMode, setIsScanMode] = useState(true);
-  const [showCartModal, setShowCartModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showManualAdd, setShowManualAdd] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState(null);
   const scanInputRef = useRef(null);
@@ -61,10 +62,10 @@ export default function InventoryForm() {
   }, []);
 
   useEffect(() => {
-    if (isScanMode && scanInputRef.current) {
+    if (scanInputRef.current) {
       scanInputRef.current.focus();
     }
-  }, [isScanMode]);
+  }, []);
 
   const handleProductQuantityChange = (productId, value) => {
     const newQuantity = parseInt(value) || 1;
@@ -120,8 +121,19 @@ export default function InventoryForm() {
     }));
  }, []);
 
-  const handleScanProduct = (productId) => {
-    const product = products.find(p => (p.medicineId || p.id).toString() === productId.toString());
+  const findProductByCode = (code) => {
+    return products.find(p => {
+      const codeStr = String(code).trim();
+      return (
+        (p.barcode && String(p.barcode).trim() === codeStr) ||
+        (p.medicineId && String(p.medicineId).trim() === codeStr) ||
+        (p.id && String(p.id).trim() === codeStr)
+      );
+    });
+  };
+
+  const handleScanProduct = (code) => {
+    const product = findProductByCode(code);
     if (product) {
       if (product.quantity === 0) {
         alert(`${getFullProductName(product)} is out of stock.`);
@@ -158,8 +170,18 @@ export default function InventoryForm() {
       )
 
     } else {
-      alert('Product not found with ID: ' + productId);
+      alert('Product not found with code: ' + code);
     }
+  };
+
+  const handleManualAddConfirm = ({ code, quantity }) => {
+    const product = findProductByCode(code);
+    if (!product) {
+      alert('Product not found with code: ' + code);
+      return;
+    }
+    handleAddToCart(product, quantity);
+    setShowManualAdd(false);
   };
 
   const handleRemoveFromCart = (productId) => {
@@ -184,14 +206,6 @@ export default function InventoryForm() {
         item.id === itemId ? { ...item, quantity: newQuantity } : item
       )
     );
-  };
-
-  const handleOpenCartModal = () => {
-    setShowCartModal(true);
-  };
-
-  const handleCloseCartModal = () => {
-    setShowCartModal(false);
   };
 
   const handleCloseReceiptModal = () => {
@@ -268,40 +282,45 @@ export default function InventoryForm() {
   const vatableSale = netPay / (1 + vatRate);
   const vatAmount = netPay - vatableSale;
 
-  const handleOpenReceiptModal = useCallback(() => {
-    if (cart.length === 0) {
-      alert('Cart is empty. Nothing to print.');
-      return;
-    }
-    
-    if (parseFloat(cashGiven) < netPay) {
-      alert('Cash given is less than the net payable amount.');
-      return;
-    }
+  const handlePaymentConfirm = useCallback(({ discountType: confirmedDiscountType, effectiveDiscountPercent, discountAmount, netPay, cashGiven, change }) => {
+    const vatRate = 0.12;
+    const vatableSaleCalc = netPay / (1 + vatRate);
+    const vatAmountCalc = netPay - vatableSaleCalc;
+
 
     const receiptData = {
       customer: customer,
       cart: cart,
       totalPrice: totalPrice,
       discountPercent: effectiveDiscountPercent,
-      discountType: discountType,
+      discountType: confirmedDiscountType,
       discountAmount: discountAmount,
       netPay: netPay,
       cashGiven: parseFloat(cashGiven) || 0,
       change: change,
       paymentMethod: 'cash',
-      vatableSale: vatableSale,
-      vatAmount: vatAmount,
+      vatableSale: vatableSaleCalc,
+      vatAmount: vatAmountCalc,
       transaction_date: new Date().toISOString(),
     };
     
+    setDiscountType(confirmedDiscountType);
+    if (confirmedDiscountType === 'custom') {
+      setCustomDiscount(effectiveDiscountPercent);
+    }
+    setCashGiven(String(cashGiven));
     setCurrentReceipt(receiptData);
+    setShowPaymentModal(false);
     setShowReceiptModal(true);
-  }, [cart, customer, totalPrice, effectiveDiscountPercent, discountType, discountAmount, netPay, cashGiven, change, vatableSale, vatAmount]);
+  }, [cart, customer, totalPrice]);
 
   const handlePrint = useCallback(() => {
-    handleOpenReceiptModal();
-  }, [handleOpenReceiptModal]);
+    if (cart.length === 0) {
+      alert('Cart is empty. Nothing to print.');
+      return;
+    }
+    setShowPaymentModal(true);
+  }, [cart.length]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -1178,87 +1197,36 @@ export default function InventoryForm() {
       `}</style>
 
       <div className="grid-container">
-        {/* Available Products Card */}
+        {/* POS Cart Only */}
         <div className="ui-card">
           <div className="ui-card-header">
-            <FaBoxOpen /> Available Products
+            <FaShoppingCart /> Point of Sale
           </div>
           <div className="ui-form-group">
-            <label htmlFor="searchProduct">Search by Product Name or Barcode</label>
+            <label htmlFor="scanInput">Scan barcode or enter code</label>
             <div className="ui-input-group">
               <input
                 type="text"
-                id="searchProduct"
-                placeholder="Scan or type barcode"
+                id="scanInput"
+                placeholder="Scan barcode or enter code then Enter"
                 className="ui-input"
-                ref={isScanMode ? scanInputRef : null}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value) {
-                    handleScanProduct(value);
-                    e.target.value = '';
+                ref={scanInputRef}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const value = e.currentTarget.value.trim();
+                    if (value) {
+                      handleScanProduct(value);
+                      e.currentTarget.value = '';
+                    }
                   }
                 }}
               />
-              <button className="ui-button ui-button-secondary" onClick={() => setIsScanMode(!isScanMode)}>
-                <FaBarcode /> {isScanMode ? 'Manual' : 'Scan'}
+              <button className="ui-button ui-button-secondary" onClick={() => setShowManualAdd(true)}>
+                <FaKeyboard /> Manual Add
               </button>
             </div>
           </div>
-          <div className="ui-table-container">
-            <table className="ui-table products-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Stock</th>
-                  <th>Price</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(product => (
-                  <tr key={product.id}>
-                    <td>{getFullProductName(product)}</td>
-                    <td>{product.quantity}</td>
-                    <td>₱{product.price}</td>
-                    <td>
-                      <div className="product-actions">
-                        <input
-                          type="number"
-                          min="1"
-                          value={productQuantities[product.id] || 1}
-                          onChange={(e) => handleProductQuantityChange(product.id, e.target.value)}
-                          data-product-id={product.id}
-                        />
-                        <button
-                          className="ui-button ui-button-primary"
-                          onClick={() => handleAddToCart(product, productQuantities[product.id] || 1)}
-                          disabled={product.quantity <= 0}
-                          data-action="add"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Shopping Cart Card */}
-        <div className="ui-card">
-          <div className="ui-card-header">
-            <FaShoppingCart /> Shopping Cart
-          <button 
-              className="cart-button" 
-              onClick={handleOpenCartModal}
-              title="View Cart Details"
-            >
-              <FaShoppingCart /> View Cart ({cart.length})
-            </button>
-          </div>
+          
           <div className="ui-cart-section">
             <div className="ui-cart-list">
               {cart.length > 0 ? (
@@ -1294,86 +1262,40 @@ export default function InventoryForm() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Payment Card */}
-        <div className="ui-payment-card">
-          <div className="ui-card-header">
-            <FaMoneyBillWave /> Payment
-          </div>
-          <div className="ui-payment-details">
-            <div className="ui-form-group">
-              <label htmlFor="discountType">Discount Type</label>
-              <select
-                id="discountType"
-                className="ui-input"
-                value={discountType}
-                onChange={(e) => setDiscountType(e.target.value)}
-              >
-                <option value="none">No Discount</option>
-                <option value="senior">Senior Citizen</option>
-                <option value="pwd">Person With Disability (PWD)</option>
-                <option value="student">Student</option>
-                <option value="custom">Custom</option>
-              </select>
-              {discountType === 'custom' && (
-                <input
-                  type="number"
-                  placeholder="Enter %"
-                  className="ui-input"
-                  value={customDiscount}
-                  onChange={(e) => setCustomDiscount(parseFloat(e.target.value) || 0)}
-                />
-              )}
-            </div>
-            <div className="ui-summary-row">
+          
+            <div className="ui-summary-row" style={{ marginTop: '12px' }}>
               <span>Total Price:</span>
               <span>₱{totalPrice.toFixed(2)}</span>
             </div>
-            <div className="ui-summary-row">
-              <span>Discount ({effectiveDiscountPercent}%):</span>
-              <span>-₱{discountAmount.toFixed(2)}</span>
-            </div>
-            <div className="ui-summary-row ui-net-payable">
-              <span>Net Payable:</span>
-              <span>₱{netPay.toFixed(2)}</span>
-            </div>
-            <div className="ui-form-group">
-              <label htmlFor="cashGiven">Cash Given</label>
-              <input
-                type="text"
-                id="cashGiven"
-                className="ui-input"
-                value={cashGiven}
-                onChange={(e) => setCashGiven(e.target.value)}
-                placeholder="Enter amount"
-              />
-            </div>
-            <div className="ui-summary-row">
-                <span>Change:</span>
-                <span>₱{(change).toFixed(2)}</span>
-            </div>
+            
           </div>
           <div className="ui-payment-actions">
-            <button className="ui-button ui-button-success" onClick={handlePrint} data-action="print">
+            <button className="ui-button ui-button-success" onClick={handlePrint} data-action="print" disabled={cart.length === 0}>
               <FaPrint /> Print
             </button>
-            <button className="ui-button ui-button-clear" onClick={handleClearCart} data-action="clear">
+            <button className="ui-button ui-button-clear" onClick={handleClearCart} data-action="clear" disabled={cart.length === 0}>
               <FaBan /> Clear cart
             </button>
           </div>
         </div>
       </div>
                   
-      {/* Shopping Cart Modal */}
-      <ShoppingCartModal
-        isOpen={showCartModal}
-        onClose={handleCloseCartModal}
-        cart={cart}
-        onRemoveFromCart={handleRemoveFromCart}
-        onUpdateQuantity={handleUpdateQuantity}
-        onClearCart={handleClearCart}
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        totalPrice={totalPrice}
+        defaultDiscountType={discountType}
+        defaultCustomDiscount={customDiscount}
+        defaultCashGiven={cashGiven}
+        onConfirm={handlePaymentConfirm}
+      />
+
+      {/* Manual Add Modal */}
+      <ManualAddModal
+        isOpen={showManualAdd}
+        onClose={() => setShowManualAdd(false)}
+        onAdd={handleManualAddConfirm}
       />
 
       {/* Receipt Modal */}
