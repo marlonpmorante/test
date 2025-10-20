@@ -1156,9 +1156,6 @@ export default function InventoryForm() {
                 value={scanQuantity}
                 onChange={(e) => setScanQuantity(Math.max(1, Number(e.target.value) || 1))}
               />
-              <button className="ui-button ui-button-secondary" onClick={() => setShowManualAdd(true)}>
-                <FaKeyboard /> Manual Add
-              </button>
             </div>
           </div>
           
