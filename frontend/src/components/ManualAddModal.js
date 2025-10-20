@@ -1,68 +1,45 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { FaMoneyBillWave, FaTimes, FaCheck } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaKeyboard, FaTimes, FaPlus } from 'react-icons/fa';
 
-const PaymentModal = ({
-  isOpen,
-  onClose,
-  totalPrice,
-  defaultDiscountType = 'none',
-  defaultCustomDiscount = 0,
-  defaultCashGiven = '',
-  onConfirm,
-}) => {
-  if (!isOpen) return null;
-
-  const [discountType, setDiscountType] = useState(defaultDiscountType);
-  const [customDiscount, setCustomDiscount] = useState(defaultCustomDiscount);
-  const [cashGiven, setCashGiven] = useState(defaultCashGiven);
+const ManualAddModal = ({ isOpen, onClose, onAdd }) => {
+  const [code, setCode] = useState('');
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    setDiscountType(defaultDiscountType);
-    setCustomDiscount(defaultCustomDiscount);
-    setCashGiven(defaultCashGiven);
-  }, [defaultDiscountType, defaultCustomDiscount, defaultCashGiven]);
+    if (isOpen) {
+      setCode('');
+      setQuantity(1);
+    }
+  }, [isOpen]);
 
-  const { effectiveDiscountPercent, discountAmount, netPay, change } = useMemo(() => {
-    const discountRates = {
-      none: 0,
-      senior: 20,
-      pwd: 20,
-      student: 10,
-    };
-    const percent = discountType === 'custom' ? (parseFloat(customDiscount) || 0) : discountRates[discountType] || 0;
-    const discount = (parseFloat(totalPrice) || 0) * percent / 100;
-    const net = (parseFloat(totalPrice) || 0) - discount;
-    const cash = parseFloat(cashGiven) || 0;
-    const chg = cash - net;
-    return {
-      effectiveDiscountPercent: percent,
-      discountAmount: discount,
-      netPay: net,
-      change: chg,
-    };
-  }, [discountType, customDiscount, totalPrice, cashGiven]);
-
-  const handleConfirm = () => {
-    if ((parseFloat(cashGiven) || 0) < netPay) {
-      alert('Cash given is less than the net payable amount.');
+  const handleSubmit = () => {
+    if (!code) {
+      alert('Enter a code/ID/barcode');
       return;
     }
-    onConfirm?.({
-      discountType,
-      effectiveDiscountPercent,
-      discountAmount,
-      netPay,
-      cashGiven: parseFloat(cashGiven) || 0,
-      change,
-    });
+    const qty = parseInt(quantity, 10) || 1;
+    if (qty < 1) {
+      alert('Quantity must be at least 1');
+      return;
+    }
+    onAdd?.({ code: String(code).trim(), quantity: qty });
   };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="manual-add-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
-            <FaMoneyBillWave className="modal-icon" /> Payment
+            <FaKeyboard className="modal-icon" /> Manual Add
           </div>
           <button className="close-button" onClick={onClose} aria-label="Close">
             <FaTimes />
@@ -70,76 +47,34 @@ const PaymentModal = ({
         </div>
 
         <div className="modal-body">
-          <div className="summary">
-            <div className="row">
-              <span>Subtotal:</span>
-              <span>₱{(parseFloat(totalPrice) || 0).toFixed(2)}</span>
-            </div>
-          </div>
-
           <div className="field">
-            <label htmlFor="discountType">Discount Type</label>
-            <select
-              id="discountType"
-              value={discountType}
-              onChange={(e) => setDiscountType(e.target.value)}
-            >
-              <option value="none">No Discount</option>
-              <option value="senior">Senior Citizen</option>
-              <option value="pwd">Person With Disability (PWD)</option>
-              <option value="student">Student</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-
-          {discountType === 'custom' && (
-            <div className="field">
-              <label htmlFor="customDiscount">Custom Discount (%)</label>
-              <input
-                id="customDiscount"
-                type="number"
-                min="0"
-                max="100"
-                value={customDiscount}
-                onChange={(e) => setCustomDiscount(e.target.value)}
-                placeholder="Enter %"
-              />
-            </div>
-          )}
-
-          <div className="summary">
-            <div className="row">
-              <span>Discount ({effectiveDiscountPercent.toFixed(2)}%):</span>
-              <span>-₱{discountAmount.toFixed(2)}</span>
-            </div>
-            <div className="row total">
-              <span>Net Payable:</span>
-              <span>₱{netPay.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="cashGiven">Cash Given</label>
+            <label htmlFor="code">Code / ID / Barcode</label>
             <input
-              id="cashGiven"
-              type="number"
-              value={cashGiven}
-              onChange={(e) => setCashGiven(e.target.value)}
-              placeholder="Enter amount"
+              id="code"
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter code, ID, or barcode"
+              autoFocus
             />
           </div>
-
-          <div className="summary">
-            <div className="row">
-              <span>Change:</span>
-              <span>₱{change.toFixed(2)}</span>
-            </div>
+          <div className="field">
+            <label htmlFor="quantity">Quantity</label>
+            <input
+              id="quantity"
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
           </div>
         </div>
 
         <div className="modal-footer">
-          <button className="confirm-btn" onClick={handleConfirm}>
-            <FaCheck /> Confirm & Preview
+          <button className="add-btn" onClick={handleSubmit}>
+            <FaPlus /> Add to Cart
           </button>
           <button className="close-btn" onClick={onClose}>
             <FaTimes /> Cancel
@@ -160,7 +95,7 @@ const PaymentModal = ({
             z-index: 1000;
             backdrop-filter: blur(4px);
           }
-          .payment-modal {
+          .manual-add-modal {
             background: #fff;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.25);
@@ -176,7 +111,7 @@ const PaymentModal = ({
             justify-content: space-between;
             align-items: center;
             padding: 16px 20px;
-            background: linear-gradient(135deg, #00796B 0%, #20c997 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
           }
           .modal-title { display: flex; align-items: center; gap: 10px; font-weight: 700; }
@@ -192,18 +127,15 @@ const PaymentModal = ({
           }
           .modal-body { padding: 18px 20px; overflow-y: auto; }
           .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-          label { font-weight: 600; color: #00796B; }
-          input, select {
+          label { font-weight: 600; color: #3c3c3c; }
+          input {
             padding: 10px 12px;
-            border: 2px solid #B0BEC5;
+            border: 2px solid #d9d9d9;
             border-radius: 10px;
             font-size: 0.95rem;
           }
-          .summary { border-top: 1px dashed #B0BEC5; padding-top: 10px; margin-top: 8px; }
-          .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-          .row.total { font-weight: 700; font-size: 1.1rem; color: #00796B; }
           .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; background: #f8f9fa; border-top: 1px solid #eee; }
-          .confirm-btn { background: #4CAF50; color: white; border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+          .add-btn { background: #667eea; color: white; border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
           .close-btn { background: #6c757d; color: white; border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         `}</style>
       </div>
@@ -211,4 +143,4 @@ const PaymentModal = ({
   );
 };
 
-export default PaymentModal;
+export default ManualAddModal;
