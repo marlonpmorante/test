@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiUrl } from '../config';
-import { FaBan, FaPrint, FaBarcode, FaShoppingCart, FaKeyboard } from 'react-icons/fa';
+import { FaBan, FaPrint, FaShoppingCart, FaKeyboard } from 'react-icons/fa';
 import ReceiptModal from './ReceiptModal';
 import PaymentModal from './PaymentModal';
 import ManualAddModal from './ManualAddModal';
@@ -30,7 +30,6 @@ export default function InventoryForm() {
   const [cart, setCart] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [productQuantities, setProductQuantities] = useState({});
   const [customer, setCustomer] = useState({ name: '', contact: '', tin: '', address: '' });
   const [cashGiven, setCashGiven] = useState('');
   const [discountType, setDiscountType] = useState('none');
@@ -47,11 +46,6 @@ export default function InventoryForm() {
         const res = await fetch(apiUrl('/products'));
         const data = await res.json();
         setProducts(data);
-        const initialQuantities = data.reduce((acc, product) => {
-          acc[product.id] = 1;
-          return acc;
-        }, {});
-        setProductQuantities(initialQuantities);
       } catch (error) {
         console.error('Error fetching products:', error);
       } finally {
@@ -66,14 +60,6 @@ export default function InventoryForm() {
       scanInputRef.current.focus();
     }
   }, []);
-
-  const handleProductQuantityChange = (productId, value) => {
-    const newQuantity = parseInt(value) || 1;
-    setProductQuantities(prev => ({
-      ...prev,
-      [productId]: newQuantity > 0 ? newQuantity : 1
-    }));
-  };
 
   const handleAddToCart = useCallback((productToAdd, quantity) => {
     if (!productToAdd) { alert('Select a product first'); return; }
@@ -114,11 +100,6 @@ export default function InventoryForm() {
           : p
       )
     );
-
-    setProductQuantities(prev => ({
-      ...prev,
-      [productToAdd.id]: 1
-    }));
  }, []);
 
   const findProductByCode = (code) => {
@@ -196,16 +177,6 @@ export default function InventoryForm() {
       )
     );
     setCart(cart.filter(item => item.id !== productId));
-  };
-
-  const handleClearCart = useCallback(() => setCart([]), []);
-
-    const handleUpdateQuantity = (itemId, newQuantity) => {
-    setCart(prevCart => 
-      prevCart.map(item => 
-        item.id === itemId ? { ...item, quantity: newQuantity } : item
-      )
-    );
   };
 
   const handleCloseReceiptModal = () => {
@@ -339,21 +310,6 @@ export default function InventoryForm() {
         return;
       }
 
-      const activeElement = document.activeElement;
-
-      // Handle actions for the focused elements first
-      // Assuming a product input field is focused
-      if (activeElement && activeElement.tagName === 'INPUT' && activeElement.dataset.productId) {
-        if (event.key === 'Enter') {
-          const productId = activeElement.dataset.productId;
-          const product = products.find(p => p.id.toString() === productId);
-          const quantity = productQuantities[productId] || 1;
-          if (product) {
-            handleAddToCart(product, quantity);
-          }
-        }
-      }
-
       // Global shortcuts
       switch (event.key.toLowerCase()) {
         case 'p':
@@ -374,7 +330,7 @@ export default function InventoryForm() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handlePrint, handleClearCart, handleAddToCart, products, productQuantities]);
+  }, [handlePrint, handleClearCart]);
 
   if (loading) return <div className="loading-message">Loading products...</div>;
 
