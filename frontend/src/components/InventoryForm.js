@@ -239,19 +239,6 @@ export default function InventoryForm() {
       };
 
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountRates = {
-    none: 0,
-    senior: 20,
-    pwd: 20,
-    student: 10,
-  };
-  const effectiveDiscountPercent = discountType === 'custom' ? customDiscount : discountRates[discountType];
-  const discountAmount = (totalPrice * effectiveDiscountPercent) / 100;
-  const netPay = totalPrice - discountAmount;
-  const change = (parseFloat(cashGiven) || 0) - netPay;
-  const vatRate = 0.12;
-  const vatableSale = netPay / (1 + vatRate);
-  const vatAmount = netPay - vatableSale;
 
   const handlePaymentConfirm = useCallback(({ discountType: confirmedDiscountType, effectiveDiscountPercent, discountAmount, netPay, cashGiven, change }) => {
     const vatRate = 0.12;
