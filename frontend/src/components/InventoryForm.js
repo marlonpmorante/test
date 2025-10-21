@@ -1264,7 +1264,7 @@ export default function InventoryForm() {
                       </tr>
                     </thead>
                     <tbody>
-                      {cart.slice().reverse().map((item) => (
+                      {cart.map((item) => (
                         <tr key={item.id}>
                           <td>{item.name}</td>
                           <td>{item.quantity}</td>
