@@ -411,7 +411,7 @@ const AddUser = () => {
                 }
 
                 .username {
-                    color: #000000ff;
+                    color: #000000;
                     font-size: 1.1em;
                 }
 
