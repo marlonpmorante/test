@@ -724,6 +724,17 @@ const StockManagement = () => {
           background: linear-gradient(45deg, #17a2b8, #138496);
           color: #fff;
           cursor: pointer;
+          padding: 12px 20px;
+          border: none;
+          border-radius: 10px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          letter-spacing: 0.5px;
         }
         .nav-button.import:hover {
           background: linear-gradient(45deg, #138496, #117a8b);
