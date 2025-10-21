@@ -5,6 +5,14 @@ import ReceiptModal from './ReceiptModal';
 import PaymentModal from './PaymentModal';
 
 // Helper functions lifted to top-level for stability in hooks
+const codesEqual = (a, b) => {
+  const sa = String(a ?? '').trim();
+  const sb = String(b ?? '').trim();
+  if (sa === sb) return true;
+  const na = Number(sa);
+  const nb = Number(sb);
+  return Number.isFinite(na) && Number.isFinite(nb) && na === nb;
+};
 const getFullProductName = (product) => {
   const supplierName = product.supplierName || '';
   const brandName = product.brandName || '';
@@ -62,14 +70,11 @@ export default function InventoryForm() {
 
 
   const findProductByCode = (code) => {
-    return products.find(p => {
-      const codeStr = String(code).trim();
-      return (
-        (p.barcode && String(p.barcode).trim() === codeStr) ||
-        (p.medicineId && String(p.medicineId).trim() === codeStr) ||
-        (p.id && String(p.id).trim() === codeStr)
-      );
-    });
+    return products.find(p => (
+      (p.barcode && codesEqual(p.barcode, code)) ||
+      (p.medicineId && codesEqual(p.medicineId, code)) ||
+      (p.id && codesEqual(p.id, code))
+    ));
   };
 
   const handleScanProduct = (code, quantity = 1) => {
@@ -84,8 +89,8 @@ export default function InventoryForm() {
         return;
       }
 
-      const existingIndex = cart.findIndex(item => item.id === product.id);
-      let updatedCart = [...cart];
+      const existingIndex = cart.findIndex(item => String(item.id) === String(product.id));
+      const updatedCart = [...cart];
 
       const productToAdd = {
         id: product.id,
