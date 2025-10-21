@@ -1005,9 +1005,10 @@ export default function InventoryForm() {
         }
         
         .ui-table td {
-          padding: 4px 8px; /* tighter rows */
+          padding: 2px 8px;
           border-bottom: 1px solid #E0E0E0;
           vertical-align: middle;
+          line-height: 1.1;
         }
 
         .ui-table th, .ui-table td {
@@ -1263,7 +1264,7 @@ export default function InventoryForm() {
                       </tr>
                     </thead>
                     <tbody>
-                      {cart.map((item) => (
+                      {cart.slice().reverse().map((item) => (
                         <tr key={item.id}>
                           <td>{item.name}</td>
                           <td>{item.quantity}</td>
