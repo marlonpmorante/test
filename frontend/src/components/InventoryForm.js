@@ -980,6 +980,7 @@ export default function InventoryForm() {
           overflow: hidden;
           box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
           flex-grow: 1;
+          table-layout: fixed; /* Enable ellipsis and stable column widths */
         }
         .ui-table thead {
           display: table-header-group; /* Ensure header renders like a normal table */
@@ -997,15 +998,20 @@ export default function InventoryForm() {
         .ui-table th {
           background-color: #00796B;
           color: white;
-          padding: 8px 10px;
+          padding: 6px 8px; /* tighter header */
           text-align: left;
           vertical-align: middle;
+          white-space: nowrap;
         }
         
         .ui-table td {
-          padding: 6px 10px;
+          padding: 4px 8px; /* tighter rows */
           border-bottom: 1px solid #E0E0E0;
           vertical-align: middle;
+        }
+
+        .ui-table th, .ui-table td {
+          line-height: 1.2; /* minimize row height */
         }
 
         /* Align numeric columns neatly */
@@ -1018,6 +1024,22 @@ export default function InventoryForm() {
           text-align: right;
           white-space: nowrap;
         }
+
+        /* Match header alignment with cell alignment */
+        .ui-table th:nth-child(2) { /* Qty */
+          text-align: center;
+        }
+        .ui-table th:nth-child(3), /* Price */
+        .ui-table th:nth-child(4)  /* Subtotal */ {
+          text-align: right;
+        }
+
+        /* Column widths for stable single-line layout */
+        .ui-table th:nth-child(1), .ui-table td:nth-child(1) { width: 50%; }
+        .ui-table th:nth-child(2), .ui-table td:nth-child(2) { width: 12%; }
+        .ui-table th:nth-child(3), .ui-table td:nth-child(3) { width: 17%; }
+        .ui-table th:nth-child(4), .ui-table td:nth-child(4) { width: 17%; }
+        .ui-table th:nth-child(5), .ui-table td:nth-child(5) { width: 4%; }
 
         .ui-table-container {
           height: calc(100% - 120px); /* Adjust height for header and search bar */
@@ -1067,10 +1089,9 @@ export default function InventoryForm() {
 
         /* Clamp long item names to two lines */
         .ui-table td:first-child {
+          white-space: nowrap;
           overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
+          text-overflow: ellipsis;
         }
 
         /* Ensure cart header stays visible while scrolling */
