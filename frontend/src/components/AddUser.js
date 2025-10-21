@@ -5,7 +5,7 @@ import { User, Lock, Shield, Eye, EyeOff, XCircle } from 'lucide-react';
 const AddUser = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('member'); // Default role
+    const [role, setRole] = useState('pharmacist'); // Default role matches DB
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -99,7 +99,7 @@ const AddUser = () => {
                 setAddedUserDetails({ username, role }); // Set details of the newly added user
                 setUsername('');
                 setPassword('');
-                setRole('member');
+                setRole('pharmacist');
                 fetchUsers();
             } else {
                 setMessage(`${data.message || 'Failed to add user.'}`);
@@ -201,7 +201,7 @@ const AddUser = () => {
                             onFocus={(e) => e.currentTarget.parentNode.classList.add('focused')}
                             onBlur={(e) => e.currentTarget.parentNode.classList.remove('focused')}
                         >
-                            <option value="member">Pharmacist</option>
+                            <option value="pharmacist">Pharmacist</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
