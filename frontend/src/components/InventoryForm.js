@@ -916,7 +916,7 @@ export default function InventoryForm() {
           display: flex;
           flex-direction: column;
           gap: 20px;
-          padding-top: -20px:
+          padding-top: 0;
           background: #FFFFFF;
           border-radius: 20px;
           padding: 25px;
@@ -972,6 +972,7 @@ export default function InventoryForm() {
         }
 
         .ui-table {
+          display: table; /* Override global table flex styles */
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
@@ -979,6 +980,18 @@ export default function InventoryForm() {
           overflow: hidden;
           box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
           flex-grow: 1;
+        }
+        .ui-table thead {
+          display: table-header-group; /* Ensure header renders like a normal table */
+        }
+        .ui-table tbody {
+          display: table-row-group; /* Ensure body renders rows */
+          overflow: visible; /* Let rows be visible */
+        }
+        .ui-table tr {
+          display: table-row; /* Override global tr styles */
+          width: auto;
+          table-layout: auto;
         }
 
         .ui-table th {
@@ -1193,8 +1206,8 @@ export default function InventoryForm() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cart.map((item, index) => (
-                      <tr key={index}>
+                    {cart.map((item) => (
+                      <tr key={item.id}>
                         <td>{item.name}</td>
                         <td>{item.quantity}</td>
                         <td>₱{item.price.toFixed(2)}</td>
