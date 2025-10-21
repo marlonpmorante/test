@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiUrl } from '../../config';
-import { FaPrint, FaEye, FaTrash } from 'react-icons/fa';
+import { FaPrint, FaEye } from 'react-icons/fa';
 
 export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGoBack }) {
   const [receipts, setReceipts] = useState([]);
@@ -60,11 +60,18 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
     setError(null);
   };
 
+  const showCustomNotification = (message, type) => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setShowNotificationModal(true);
+  };
+
   const handleCloseNotification = () => {
     setShowNotificationModal(false);
     setNotificationMessage('');
     setNotificationType('success');
   };
+
 
   // Confirmation Modal Component
   const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
@@ -252,6 +259,7 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
           </table>
         </div>
       )}
+
 
       {showNotificationModal && (
         <NotificationModal
@@ -513,15 +521,7 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
         .icon-button.view-button:hover {
           background-color: #e6f7ff;
         }
-
-        .icon-button.delete-button {
-          color: #dc3545;
-        }
-
-        .icon-button.delete-button:hover {
-          background-color: #ffe6e6;
-        }
-
+          
         /* Custom Modal Styles (copied from StockReport.js) */
         .custom-modal-overlay {
             position: fixed;

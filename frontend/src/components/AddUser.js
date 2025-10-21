@@ -402,12 +402,12 @@ const AddUser = () => {
                     border-radius: 10px;
                     margin-bottom: 12px;
                     background-color: #ffffff;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0);
                     transition: all 0.3s ease;
                 }
 
                 .user-list-item:hover {
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0);
                 }
 
                 .username {
