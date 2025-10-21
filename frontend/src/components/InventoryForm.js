@@ -1063,14 +1063,14 @@ export default function InventoryForm() {
           position: relative; /* Anchor for sticky header */
           border-left: 5px solid #00796B; /* Vertical bar */
           padding-left: 15px;
-          padding-bottom: 56px; /* Space for sticky total footer */
+          padding-bottom: 0;
         }
         /* Keep Print button visible */
         .ui-payment-actions {
           position: sticky;
           bottom: 0;
           background: #fff;
-          padding: 12px 0;
+          padding: 0;
           border-top: 1px solid #E0E0E0;
           z-index: 2;
           display: flex;
@@ -1092,6 +1092,7 @@ export default function InventoryForm() {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          vertical-align: top; /* keep first column content at the top */
         }
 
         /* Ensure cart header stays visible while scrolling */
@@ -1129,7 +1130,7 @@ export default function InventoryForm() {
           display: flex;
           justify-content: flex-end;
           gap: 10px;
-          margin-top: 20px;
+          margin-top: 0;
         }
         
         .ui-payment-actions button {
