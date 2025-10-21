@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiUrl } from '../../config';
-import { FaPlus, FaList, FaTags, FaEdit, FaTrash, FaTimes, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaList, FaTags, FaEdit, FaTrash, FaTimes, FaSearch, FaFileImport } from 'react-icons/fa';
 
 // Fix for "ResizeObserver loop completed with undelivered notifications" error
 const originalWarn = console.warn;
@@ -26,6 +26,7 @@ const StockManagement = () => {
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState('add');
   const [searchCategoryTerm, setSearchCategoryTerm] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,6 +52,37 @@ const StockManagement = () => {
     fetchData();
   }, []);
 
+  const handleImportExcel = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch(apiUrl('/products/import'), {
+        method: 'POST',
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showCustomAlert(data.message || 'Import failed.');
+      } else {
+        // Refresh stocks after import
+        const productsRes = await fetch(apiUrl('/products'));
+        const productsData = await productsRes.json();
+        setStocks(productsData);
+        const summary = data.summary || {};
+        showCustomAlert(`Import completed. Inserted: ${summary.inserted || 0}, Updated: ${summary.updated || 0}${(data.errors && data.errors.length) ? `, Errors: ${data.errors.length}` : ''}`);
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      showCustomAlert('Unexpected error during import.');
+    } finally {
+      setIsImporting(false);
+      // Reset file input so the same file can be selected again if needed
+      e.target.value = '';
+    }
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEntry({ ...entry, [name]: value });
@@ -301,6 +333,17 @@ const StockManagement = () => {
         <button onClick={() => setViewMode('category')} className="nav-button success">
           <FaTags style={{ marginRight: '6px' }} /> Manage Categories
         </button>
+        <label className="nav-button import" htmlFor="excelImport" title="Import from Excel">
+          <FaFileImport style={{ marginRight: '6px' }} /> {isImporting ? 'Importing...' : 'Import Excel'}
+          <input
+            id="excelImport"
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImportExcel}
+            style={{ display: 'none' }}
+            disabled={isImporting}
+          />
+        </label>
       </div>
 
       {isAlertVisible && (
@@ -675,6 +718,15 @@ const StockManagement = () => {
           background: linear-gradient(45deg, #c82333, var(--danger-color));
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        .nav-button.import {
+          background: linear-gradient(45deg, #17a2b8, #138496);
+          color: #fff;
+          cursor: pointer;
+        }
+        .nav-button.import:hover {
+          background: linear-gradient(45deg, #138496, #117a8b);
         }
 
         .nav-button {

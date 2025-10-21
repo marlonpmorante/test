@@ -3,6 +3,7 @@ const express = require('express');
 const mysql = require('mysql2/promise'); // Using promise-based version
 const cors = require('cors');
 const multer = require('multer');
+const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
@@ -585,6 +586,129 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ message: 'An unexpected error occurred during login.', error: err.message });
+    }
+});
+
+// --- Bulk Import Stock from Excel ---
+// Accepts .xlsx/.xls files with a header row. Expected columns (case-insensitive):
+// medicineId, supplierName, medicineName, genericName, brandName, category,
+// description, form, strength, unit, reorderLevel, price, quantity, deliveryDate, barcode
+// - deliveryDate: parsed from Excel; if not parseable, uses today
+// - If a product with same barcode exists, updates its quantity and price (and optional fields).
+app.post('/api/products/import', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded. Please attach an Excel file under field name "file".' });
+        }
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return res.status(400).json({ message: 'The uploaded Excel file is empty.' });
+        }
+
+        // Normalize keys to lower-case for robust mapping
+        const normalizeKey = (k) => String(k || '').trim().toLowerCase();
+
+        let insertedCount = 0;
+        let updatedCount = 0;
+        const errors = [];
+
+        for (let idx = 0; idx < rows.length; idx++) {
+            const raw = rows[idx];
+            const row = {};
+            for (const k of Object.keys(raw)) {
+                row[normalizeKey(k)] = raw[k];
+            }
+
+            // Basic required fields
+            const barcode = String(row['barcode'] ?? '').trim();
+            const medicineId = String(row['medicineid'] ?? row['medicine_id'] ?? '').trim();
+            const supplierName = String(row['suppliername'] ?? row['supplier_name'] ?? '').trim();
+            const medicineName = String(row['medicinename'] ?? row['medicine_name'] ?? '').trim();
+            const genericName = String(row['genericname'] ?? row['generic_name'] ?? '').trim();
+            const brandName = String(row['brandname'] ?? row['brand_name'] ?? '').trim();
+            const category = String(row['category'] ?? '').trim();
+            const description = String(row['description'] ?? '').trim();
+            const form = String(row['form'] ?? '').trim();
+            const strength = String(row['strength'] ?? '').trim();
+            const unit = String(row['unit'] ?? '').trim();
+            const reorderLevel = Number(row['reorderlevel'] ?? row['reorder_level'] ?? 0) || 0;
+            const price = Number(row['price'] ?? 0) || 0;
+            const quantity = Number(row['quantity'] ?? 0) || 0;
+            let deliveryDate = row['deliverydate'] ?? row['delivery_date'] ?? '';
+
+            // Parse delivery date from Excel
+            if (deliveryDate) {
+                const asDate = XLSX.SSF ? XLSX.SSF.parse_date_code?.(deliveryDate) : null;
+                if (asDate && typeof asDate === 'object') {
+                    const d = new Date(asDate.y, (asDate.m || 1) - 1, asDate.d || 1);
+                    deliveryDate = d.toISOString().slice(0, 10);
+                } else {
+                    const parsed = new Date(deliveryDate);
+                    if (!isNaN(parsed.getTime())) {
+                        deliveryDate = parsed.toISOString().slice(0, 10);
+                    } else {
+                        deliveryDate = new Date().toISOString().slice(0, 10);
+                    }
+                }
+            } else {
+                deliveryDate = new Date().toISOString().slice(0, 10);
+            }
+
+            if (!barcode || !medicineId || !supplierName || !brandName || !category || !price || !quantity || !deliveryDate) {
+                errors.push(`Row ${idx + 2}: Missing required fields (need barcode, medicineId, supplierName, brandName, category, price, quantity, deliveryDate).`);
+                continue;
+            }
+
+            try {
+                // Check for existing product by barcode
+                const [existingRows] = await pool.query('SELECT id FROM products WHERE barcode = ?', [barcode]);
+                if (existingRows.length > 0) {
+                    const id = existingRows[0].id;
+                    await pool.query(
+                        `UPDATE products SET 
+                            medicineId = ?, supplierName = ?, medicineName = ?, genericName = ?,
+                            brandName = ?, category = ?, description = ?, form = ?, strength = ?,
+                            unit = ?, reorderLevel = ?, price = ?, quantity = quantity + ?, deliveryDate = ?
+                         WHERE id = ?`,
+                        [
+                            medicineId, supplierName, medicineName, genericName,
+                            brandName, category, description, form, strength,
+                            unit, reorderLevel, price, quantity, deliveryDate, id
+                        ]
+                    );
+                    updatedCount += 1;
+                } else {
+                    await pool.query(
+                        `INSERT INTO products (
+                            medicineId, supplierName, medicineName, genericName,
+                            brandName, category, description, form, strength,
+                            unit, reorderLevel, price, quantity, deliveryDate, imageUrl, barcode
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+                        [
+                            medicineId, supplierName, medicineName, genericName,
+                            brandName, category, description, form, strength,
+                            unit, reorderLevel, price, quantity, deliveryDate, null, barcode
+                        ]
+                    );
+                    insertedCount += 1;
+                }
+            } catch (rowErr) {
+                errors.push(`Row ${idx + 2}: ${rowErr.message || rowErr}`);
+            }
+        }
+
+        res.json({
+            message: 'Import completed',
+            summary: { inserted: insertedCount, updated: updatedCount, errors: errors.length },
+            errors
+        });
+    } catch (err) {
+        console.error('Error importing products from Excel:', err);
+        res.status(500).json({ message: 'Failed to import products from Excel.', error: err.message });
     }
 });
 
