@@ -1028,7 +1028,6 @@ export default function InventoryForm() {
           position: relative; /* Anchor for sticky header */
           border-left: 5px solid #00796B; /* Vertical bar */
           padding-left: 15px;
-          padding-bottom: 56px; /* Space for sticky total footer */
         }
         /* Keep Print button visible */
         .ui-payment-actions {
