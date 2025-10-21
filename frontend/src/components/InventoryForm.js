@@ -1014,18 +1014,21 @@ export default function InventoryForm() {
         }
 
         .ui-cart-section {
+          flex-grow: 1;
           display: flex;
           flex-direction: column;
           position: relative;
+          min-height: 420px; /* Ensure cart area is always visible */
         }
 
         .ui-cart-list {
           flex-grow: 1;
           overflow-y: auto;
+          height: 100%;
           position: relative; /* Anchor for sticky header */
           border-left: 5px solid #00796B; /* Vertical bar */
           padding-left: 15px;
-          max-height: calc(100% - 180px); /* Keep actions visible */
+          padding-bottom: 56px; /* Space for sticky total footer */
         }
         /* Keep Print button visible */
         .ui-payment-actions {
