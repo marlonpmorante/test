@@ -971,82 +971,52 @@ export default function InventoryForm() {
           background-color: #546E7A;
         }
 
-        .ui-table {
-          display: table; /* Override global table flex styles */
-          width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
-          border-radius: 10px;
-          overflow: hidden;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        /* Simple cart table reset styles */
+        .simple-cart-container {
           flex-grow: 1;
-          table-layout: fixed; /* Enable ellipsis and stable column widths */
-        }
-        .ui-table thead {
-          display: table-header-group; /* Ensure header renders like a normal table */
-        }
-        .ui-table tbody {
-          display: table-row-group; /* Ensure body renders rows */
-          overflow: visible; /* Let rows be visible */
-        }
-        .ui-table tr {
-          display: table-row; /* Override global tr styles */
-          width: auto;
-          table-layout: auto;
-        }
-
-        .ui-table th {
-          background-color: #00796B;
-          color: white;
-          padding: 6px 8px; /* tighter header */
-          text-align: left;
-          vertical-align: middle;
-          white-space: nowrap;
-        }
-        
-        .ui-table td {
-          padding: 2px 8px;
-          border-bottom: 1px solid #E0E0E0;
-          vertical-align: middle;
-          line-height: 1.1;
-        }
-
-        .ui-table th, .ui-table td {
-          line-height: 1.2; /* minimize row height */
-        }
-
-        /* Align numeric columns neatly */
-        .ui-table td:nth-child(2) { /* Qty */
-          text-align: center;
-          white-space: nowrap;
-        }
-        .ui-table td:nth-child(3), /* Price */
-        .ui-table td:nth-child(4)  /* Subtotal */ {
-          text-align: right;
-          white-space: nowrap;
-        }
-
-        /* Match header alignment with cell alignment */
-        .ui-table th:nth-child(2) { /* Qty */
-          text-align: center;
-        }
-        .ui-table th:nth-child(3), /* Price */
-        .ui-table th:nth-child(4)  /* Subtotal */ {
-          text-align: right;
-        }
-
-        /* Column widths for stable single-line layout */
-        .ui-table th:nth-child(1), .ui-table td:nth-child(1) { width: 50%; }
-        .ui-table th:nth-child(2), .ui-table td:nth-child(2) { width: 12%; }
-        .ui-table th:nth-child(3), .ui-table td:nth-child(3) { width: 17%; }
-        .ui-table th:nth-child(4), .ui-table td:nth-child(4) { width: 17%; }
-        .ui-table th:nth-child(5), .ui-table td:nth-child(5) { width: 4%; }
-
-        .ui-table-container {
-          height: calc(100% - 120px); /* Adjust height for header and search bar */
           overflow-y: auto;
-          border-radius: 10px;
+          height: 100%;
           border: 1px solid #E0E0E0;
+          border-radius: 6px;
+        }
+
+        .simple-cart-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        .simple-cart-table thead { display: table-header-group; }
+        .simple-cart-table tbody { display: table-row-group; }
+        .simple-cart-table tr { display: table-row; }
+
+        .simple-cart-table th,
+        .simple-cart-table td {
+          padding: 6px 8px;
+          border-bottom: 1px solid #eee;
+          font-size: 0.95rem;
+        }
+
+        .simple-cart-table thead th {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          background: #f7f7f7;
+          color: #333;
+          text-align: left;
+        }
+
+        /* Column alignment and widths */
+        .simple-cart-table th:nth-child(1), .simple-cart-table td:nth-child(1) { width: 52%; text-align: left; }
+        .simple-cart-table th:nth-child(2), .simple-cart-table td:nth-child(2) { width: 12%; text-align: center; }
+        .simple-cart-table th:nth-child(3), .simple-cart-table td:nth-child(3) { width: 16%; text-align: right; }
+        .simple-cart-table th:nth-child(4), .simple-cart-table td:nth-child(4) { width: 16%; text-align: right; }
+        .simple-cart-table th:nth-child(5), .simple-cart-table td:nth-child(5) { width: 4%; text-align: center; }
+
+        /* Clamp long item names to a single line with ellipsis */
+        .simple-cart-table td:first-child {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .ui-cart-section {
@@ -1057,15 +1027,7 @@ export default function InventoryForm() {
           min-height: 420px; /* Ensure cart area is always visible */
         }
 
-        .ui-cart-list {
-          flex-grow: 1;
-          overflow-y: auto;
-          height: 100%;
-          position: relative; /* Anchor for sticky header */
-          border-left: 5px solid #00796B; /* Vertical bar */
-          padding-left: 15px;
-          padding-bottom: 0;
-        }
+        /* Remove old cart list visuals; using simple reset above */
         /* Keep Print button visible */
         .ui-payment-actions {
           position: sticky;
@@ -1250,21 +1212,21 @@ export default function InventoryForm() {
           </div>
           
           <div className="ui-cart-section">
-            <div className="ui-cart-list">
+            <div className="simple-cart-container">
               {cart.length > 0 ? (
                 <>
-                  <table className="ui-table">
+                  <table className="simple-cart-table">
                     <thead>
                       <tr>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Price</th>
-                        <th>Subtotal</th>
+                        <th>ITEM</th>
+                        <th>QTY</th>
+                        <th>PRICE</th>
+                        <th>SUBTOTAL</th>
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {cart.slice().reverse().map((item) => (
+                      {cart.map((item) => (
                         <tr key={item.id}>
                           <td>{item.name}</td>
                           <td>{item.quantity}</td>
