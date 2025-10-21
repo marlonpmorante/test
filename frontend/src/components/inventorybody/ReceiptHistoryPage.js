@@ -60,41 +60,11 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
     setError(null);
   };
 
-  const showCustomNotification = (message, type) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setShowNotificationModal(true);
-  };
-
   const handleCloseNotification = () => {
     setShowNotificationModal(false);
     setNotificationMessage('');
     setNotificationType('success');
   };
-
-
-  // Confirmation Modal Component
-  const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
-    <div className="custom-modal-overlay">
-      <div className="custom-modal-content">
-        <p>{message}</p>
-        <div className="custom-modal-actions">
-          <button
-            onClick={onConfirm}
-            className="custom-modal-button confirm-button"
-          >
-            Confirm
-          </button>
-          <button
-            onClick={onCancel}
-            className="custom-modal-button cancel-button"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   // Notification Modal Component
   const NotificationModal = ({ message, type, onClose }) => (
@@ -521,7 +491,7 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
         .icon-button.view-button:hover {
           background-color: #e6f7ff;
         }
-          
+
         /* Custom Modal Styles (copied from StockReport.js) */
         .custom-modal-overlay {
             position: fixed;

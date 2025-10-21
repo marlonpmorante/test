@@ -45,7 +45,8 @@ const LoginForm = ({ onLogin }) => { //
 
         // **IMPORTANT: Extract userRole and username from the backend response**
         const loggedInUsername = data.user ? data.user.username : username;
-        const userRole = data.user ? data.user.role : 'member'; // Default to 'member' if role is not provided
+        const rawRole = data.user ? data.user.role : 'member';
+        const userRole = rawRole === 'admin' ? 'admin' : 'member'; // Normalize any non-admin to 'member'
 
         setTimeout(() => {
           onLogin(userRole, loggedInUsername); // Pass the role and username to the onLogin callback
