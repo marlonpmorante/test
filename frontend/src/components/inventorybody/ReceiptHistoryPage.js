@@ -8,8 +8,6 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false); // New state for details loading
   const [error, setError] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [receiptToDelete, setReceiptToDelete] = useState(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState('success');
@@ -62,49 +60,10 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
     setError(null);
   };
 
-  const handleDeleteClick = (receipt) => {
-    setReceiptToDelete(receipt);
-    setShowConfirmModal(true);
-  };
-
-  const showCustomNotification = (message, type) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setShowNotificationModal(true);
-  };
-
   const handleCloseNotification = () => {
     setShowNotificationModal(false);
     setNotificationMessage('');
     setNotificationType('success');
-  };
-
-  const handleConfirmDelete = async () => {
-    if (receiptToDelete) {
-      try {
-        const response = await fetch(apiUrl(`/receipts/${receiptToDelete.id}`), {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        await fetchReceipts(); // Refresh the list of receipts
-        setShowConfirmModal(false);
-        setReceiptToDelete(null);
-        showCustomNotification('Receipt deleted successfully!', 'success');
-      } catch (err) {
-        console.error('Error deleting receipt:', err);
-        setShowConfirmModal(false);
-        setReceiptToDelete(null);
-        showCustomNotification('Failed to delete receipt. Please try again.', 'error');
-      }
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setShowConfirmModal(false);
-    setReceiptToDelete(null);
   };
 
   // Confirmation Modal Component
@@ -284,12 +243,6 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
                         >
                           <FaEye /> View
                         </button>
-                        <button
-                          onClick={() => handleDeleteClick(receipt)}
-                          className="icon-button delete-button"
-                        >
-                          <FaTrash /> Delete
-                        </button>
                       </td>
                     </tr>
                   );
@@ -298,14 +251,6 @@ export default function ReceiptHistoryPage({ onGoBackToPOS, onPrintReceipt, onGo
             </tbody>
           </table>
         </div>
-      )}
-
-      {showConfirmModal && (
-        <ConfirmationModal
-          message={`Are you sure you want to delete receipt ${receiptToDelete?.receipt_number || receiptToDelete?.id}? This action cannot be undone.`}
-          onConfirm={handleConfirmDelete}
-          onCancel={handleCancelDelete}
-        />
       )}
 
       {showNotificationModal && (
