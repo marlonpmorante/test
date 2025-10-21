@@ -1228,7 +1228,7 @@ export default function InventoryForm() {
               )}
             </div>
           
-            <div className="ui-summary-row" style={{ marginTop: '2px' }}>
+            <div className="ui-summary-row" style={{ marginTop: '50px' }}>
               <span>Total Price:</span>
               <span>₱{totalPrice.toFixed(2)}</span>
             </div>
